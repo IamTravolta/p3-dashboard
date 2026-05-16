@@ -13,37 +13,36 @@ function Skeleton() {
   )
 }
 
-const opts = { loading: () => <Skeleton /> }
-
+// next/dynamic requires the options argument to be an inline object literal (not a variable)
 // ── Portfolio group ───────────────────────────────────────────────────────────
-const ActionCenterView   = dynamic(() => import('@/components/actionCenter/ActionCenterView'),   opts)
-const MyPositionsView    = dynamic(() => import('@/components/positions/MyPositionsView'),       opts)
-const SizingView         = dynamic(() => import('@/components/positions/SizingView'),            opts)
-const CatalystView       = dynamic(() => import('@/components/positions/CatalystView'),          opts)
-const HedgeView          = dynamic(() => import('@/components/positions/HedgeView'),             opts)
-const OptionsView        = dynamic(() => import('@/components/research/OptionsView'),            opts)
+const ActionCenterView   = dynamic(() => import('@/components/actionCenter/ActionCenterView'),   { loading: () => <Skeleton /> })
+const MyPositionsView    = dynamic(() => import('@/components/positions/MyPositionsView'),       { loading: () => <Skeleton /> })
+const SizingView         = dynamic(() => import('@/components/positions/SizingView'),            { loading: () => <Skeleton /> })
+const CatalystView       = dynamic(() => import('@/components/positions/CatalystView'),          { loading: () => <Skeleton /> })
+const HedgeView          = dynamic(() => import('@/components/positions/HedgeView'),             { loading: () => <Skeleton /> })
+const OptionsView        = dynamic(() => import('@/components/research/OptionsView'),            { loading: () => <Skeleton /> })
 
 // ── Pipeline group ────────────────────────────────────────────────────────────
-const TradeIdeasView     = dynamic(() => import('@/components/research/TradeIdeasView'),         opts)
-const ValidatorView      = dynamic(() => import('@/components/research/ValidatorView'),          opts)
-const InsiderFlowView    = dynamic(() => import('@/components/research/InsiderFlowView'),        opts)
-const SmartMoneyView     = dynamic(() => import('@/components/research/SmartMoneyView'),         opts)
-const EarningsView       = dynamic(() => import('@/components/research/EarningsView'),           opts)
-const MomentumView       = dynamic(() => import('@/components/research/MomentumView'),           opts)
-const CorrelationsView   = dynamic(() => import('@/components/research/CorrelationsView'),       opts)
-const PredictionsView    = dynamic(() => import('@/components/research/PredictionsView'),        opts)
+const TradeIdeasView     = dynamic(() => import('@/components/research/TradeIdeasView'),         { loading: () => <Skeleton /> })
+const ValidatorView      = dynamic(() => import('@/components/research/ValidatorView'),          { loading: () => <Skeleton /> })
+const InsiderFlowView    = dynamic(() => import('@/components/research/InsiderFlowView'),        { loading: () => <Skeleton /> })
+const SmartMoneyView     = dynamic(() => import('@/components/research/SmartMoneyView'),         { loading: () => <Skeleton /> })
+const EarningsView       = dynamic(() => import('@/components/research/EarningsView'),           { loading: () => <Skeleton /> })
+const MomentumView       = dynamic(() => import('@/components/research/MomentumView'),           { loading: () => <Skeleton /> })
+const CorrelationsView   = dynamic(() => import('@/components/research/CorrelationsView'),       { loading: () => <Skeleton /> })
+const PredictionsView    = dynamic(() => import('@/components/research/PredictionsView'),        { loading: () => <Skeleton /> })
 
 // ── Learnings group ───────────────────────────────────────────────────────────
-const SignalsView        = dynamic(() => import('@/components/signals/SignalsView'),             opts)
-const PaperTradesView    = dynamic(() => import('@/components/paperTrades/PaperTradesView'),     opts)
-const ThesisView         = dynamic(() => import('@/components/thesis/ThesisView'),               opts)
-const BehavioralView     = dynamic(() => import('@/components/behavioral/BehavioralView'),       opts)
-const BacktestView       = dynamic(() => import('@/components/learnings/BacktestView'),          opts)
-const SourcesView        = dynamic(() => import('@/components/learnings/SourcesView'),           opts)
+const SignalsView        = dynamic(() => import('@/components/signals/SignalsView'),             { loading: () => <Skeleton /> })
+const PaperTradesView    = dynamic(() => import('@/components/paperTrades/PaperTradesView'),     { loading: () => <Skeleton /> })
+const ThesisView         = dynamic(() => import('@/components/thesis/ThesisView'),               { loading: () => <Skeleton /> })
+const BehavioralView     = dynamic(() => import('@/components/behavioral/BehavioralView'),       { loading: () => <Skeleton /> })
+const BacktestView       = dynamic(() => import('@/components/learnings/BacktestView'),          { loading: () => <Skeleton /> })
+const SourcesView        = dynamic(() => import('@/components/learnings/SourcesView'),           { loading: () => <Skeleton /> })
 
 // ── Standalone ────────────────────────────────────────────────────────────────
-const BriefingView       = dynamic(() => import('@/components/briefing/BriefingView'),           opts)
-const SettingsView       = dynamic(() => import('@/components/settings/SettingsView'),           opts)
+const BriefingView       = dynamic(() => import('@/components/briefing/BriefingView'),           { loading: () => <Skeleton /> })
+const SettingsView       = dynamic(() => import('@/components/settings/SettingsView'),           { loading: () => <Skeleton /> })
 
 export default function TabContent() {
   const activeGroup  = useDashboardStore((s) => s.activeGroup)
