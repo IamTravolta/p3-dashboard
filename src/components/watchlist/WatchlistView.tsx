@@ -10,8 +10,6 @@ export default function WatchlistView() {
   const watchlist          = useDashboardStore((s) => s.watchlist)
   const removeWatchlistItem = useDashboardStore((s) => s.removeWatchlistItem)
   const prices             = useDashboardStore((s) => s.prices)
-  const activeTab          = useDashboardStore((s) => s.activeTab)
-
   const [modalOpen,    setModalOpen]    = useState(false)
   const [editTarget,   setEditTarget]   = useState<Parameters<typeof AddWatchlistModal>[0]['editItem']>(undefined)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -22,8 +20,6 @@ export default function WatchlistView() {
   const railwayUrl = useDashboardStore((s) => s.railwayUrl)
 
   const { loadWatchlist } = useWatchlistData()
-
-  if (activeTab !== 'watchlist') return null
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   function openEdit(item: WatchlistItem) {
