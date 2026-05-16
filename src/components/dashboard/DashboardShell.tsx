@@ -1,9 +1,63 @@
 'use client'
 
 import type { User } from '@supabase/supabase-js'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDashboardStore } from '@/lib/store'
+
+// ── Sync-age label ("Sync 2m ago" / "Syncing…") ──────────────────────────────
+function SyncStatus({ isSyncing, lastFetched }: { isSyncing: boolean; lastFetched: number | null }) {
+  const [label, setLabel] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!lastFetched) return
+    function update() {
+      const sec = Math.floor((Date.now() - lastFetched!) / 1000)
+      if (sec < 60)        setLabel('Sync <1m ago')
+      else if (sec < 3600) setLabel(`Sync ${Math.floor(sec / 60)}m ago`)
+      else                 setLabel(`Sync ${Math.floor(sec / 3600)}h ago`)
+    }
+    update()
+    const t = setInterval(update, 30_000)
+    return () => clearInterval(t)
+  }, [lastFetched])
+
+  if (isSyncing) return (
+    <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-400">
+      <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+      Syncing…
+    </span>
+  )
+
+  if (!label) return null
+
+  return (
+    <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-500">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      {label}
+    </span>
+  )
+}
+
+// ── Bell icon with unread badge ───────────────────────────────────────────────
+function AlertBell({ unread, onClick }: { unread: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-500 hover:text-white hover:border-zinc-700 transition"
+      title={unread > 0 ? `${unread} unread alert${unread > 1 ? 's' : ''}` : 'No alerts'}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+      {unread > 0 && (
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[9px] font-bold text-white">
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </button>
+  )
+}
 
 interface DashboardShellProps {
   user:     User
@@ -75,14 +129,18 @@ const NAV_GROUPS = [
 ]
 
 export default function DashboardShell({ user, children }: DashboardShellProps) {
-  const setUserId      = useDashboardStore((s) => s.setUserId)
-  const activeGroup    = useDashboardStore((s) => s.activeGroup)
-  const activeSubTab   = useDashboardStore((s) => s.activeSubTab)
-  const setActiveGroup = useDashboardStore((s) => s.setActiveGroup)
-  const setActiveSubTab = useDashboardStore((s) => s.setActiveSubTab)
-  const isSyncing      = useDashboardStore((s) => s.isSyncing)
-  const reset          = useDashboardStore((s) => s.reset)
-  const supabase       = createClient()
+  const setUserId         = useDashboardStore((s) => s.setUserId)
+  const activeGroup       = useDashboardStore((s) => s.activeGroup)
+  const activeSubTab      = useDashboardStore((s) => s.activeSubTab)
+  const setActiveGroup    = useDashboardStore((s) => s.setActiveGroup)
+  const setActiveSubTab   = useDashboardStore((s) => s.setActiveSubTab)
+  const isSyncing         = useDashboardStore((s) => s.isSyncing)
+  const pricesLastFetched = useDashboardStore((s) => s.pricesLastFetched)
+  const alerts            = useDashboardStore((s) => s.alerts)
+  const reset             = useDashboardStore((s) => s.reset)
+  const supabase          = createClient()
+
+  const unreadCount = alerts.filter((a) => !a.readAt).length
 
   useEffect(() => {
     setUserId(user.id)
@@ -130,15 +188,11 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
 
             {/* Right cluster */}
             <div className="flex items-center gap-2 ml-2 shrink-0">
-              {isSyncing && (
-                <span className="hidden items-center gap-1 text-xs text-indigo-400 sm:flex">
-                  <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75" />
-                  </svg>
-                  Syncing
-                </span>
-              )}
+              <SyncStatus isSyncing={isSyncing} lastFetched={pricesLastFetched} />
+              <AlertBell
+                unread={unreadCount}
+                onClick={() => setActiveGroup('portfolio', 'action')}
+              />
               <span className="hidden text-xs text-zinc-600 sm:block max-w-[140px] truncate">{user.email}</span>
               <button
                 onClick={handleSignOut}
