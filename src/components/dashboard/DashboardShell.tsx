@@ -36,7 +36,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     { id: 'paper',       label: 'Paper Trades', icon: '📝' },
     { id: 'thesis',      label: 'Thesis',      icon: '📖' },
     { id: 'behavioral',  label: 'Behavior',    icon: '🧠' },
-    { id: 'settings',    label: 'Settings',    icon: '⚙️' },
+    { id: 'briefing',   label: 'Briefing',    icon: '📰' },
+    { id: 'settings',   label: 'Settings',    icon: '⚙️' },
   ]
 
   return (

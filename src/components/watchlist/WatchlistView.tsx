@@ -63,10 +63,17 @@ export default function WatchlistView() {
   async function runAnalysis(item: WatchlistItem) {
     setAnalyzing(item.ticker)
     try {
-      const resp = await fetch('/api/signals', {
+      const resp = await fetch('/api/analyze', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ticker: item.ticker, exchange: item.exchange }),
+        body:    JSON.stringify({
+          ticker:       item.ticker,
+          exchange:     item.exchange,
+          sector:       item.sector,
+          name:         item.name,
+          reason:       item.reason || undefined,
+          watchlist_id: item.id,
+        }),
       })
       const data = await resp.json() as SignalResult & { error?: string }
       if (data.error) {
@@ -74,8 +81,8 @@ export default function WatchlistView() {
       } else {
         setSignalResults((r) => ({ ...r, [item.ticker]: data }))
       }
-    } catch (err) {
-      setSignalResults((r) => ({ ...r, [item.ticker]: { error: 'Backend unreachable' } }))
+    } catch {
+      setSignalResults((r) => ({ ...r, [item.ticker]: { error: 'Analysis failed' } }))
     } finally {
       setAnalyzing(null)
     }
@@ -227,12 +234,27 @@ export default function WatchlistView() {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+interface SignalModule {
+  value:       string
+  confidence:  number
+  reasoning?:  string
+  module_name?: string
+}
+
 interface SignalResult {
-  ticker?:  string
-  signals?: Record<string, { value: string; confidence: number; reasoning?: string }>
-  verdict?: { finalVerdict: string; confidence: number; reasoning?: string }
-  price?:   number
-  error?:   string
+  ticker?:      string
+  // New /api/analyze shape
+  signals?:     SignalModule[]
+  verdict?: {
+    verdict?:      string
+    finalVerdict?: string   // legacy compat
+    confidence:    number
+    score?:        number
+    reasoning?:    string
+  }
+  speculation?: { score: number; label: string }
+  price?:       number
+  error?:       string
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -290,27 +312,39 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
     )
   }
 
-  const signals = result.signals ?? {}
-  const verdict = result.verdict
+  const signalList = Array.isArray(result.signals) ? result.signals : []
+  const verdict    = result.verdict
+  const verdictLabel = verdict?.verdict ?? verdict?.finalVerdict ?? 'HOLD'
 
-  const verdictColor = verdict?.finalVerdict === 'BUY'
+  const verdictColor = verdictLabel === 'BUY'
     ? 'text-emerald-400 bg-emerald-900/30 border-emerald-800'
-    : verdict?.finalVerdict === 'SELL'
+    : verdictLabel === 'SELL'
     ? 'text-red-400 bg-red-900/30 border-red-800'
     : 'text-yellow-400 bg-yellow-900/30 border-yellow-800'
 
   return (
     <div className="mt-3 border-t border-zinc-800 pt-3 space-y-2">
       {verdict && (
-        <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold ${verdictColor}`}>
-          {verdict.finalVerdict}
-          <span className="text-xs font-normal opacity-75">{(verdict.confidence * 100).toFixed(0)}% confidence</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold ${verdictColor}`}>
+            {verdictLabel}
+            <span className="text-xs font-normal opacity-75">{(verdict.confidence * 100).toFixed(0)}% conf</span>
+            {verdict.score != null && <span className="text-xs font-normal opacity-75">· {verdict.score.toFixed(1)}/10</span>}
+          </div>
+          {result.speculation && (
+            <div className="rounded-lg bg-zinc-800/50 px-2 py-1 text-xs text-zinc-400">
+              Speculation: <span className="font-medium text-white">{result.speculation.score}/10</span> {result.speculation.label}
+            </div>
+          )}
         </div>
       )}
+      {verdict?.reasoning && (
+        <p className="text-xs text-zinc-500 leading-relaxed line-clamp-3">{verdict.reasoning}</p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {Object.entries(signals).map(([module, sig]) => (
-          <div key={module} className="rounded-lg bg-zinc-800/50 px-2 py-1.5">
-            <p className="text-xs text-zinc-500 capitalize">{module.replace(/_/g, ' ')}</p>
+        {signalList.map((sig, i) => (
+          <div key={i} className="rounded-lg bg-zinc-800/50 px-2 py-1.5">
+            <p className="text-xs text-zinc-500 capitalize">{(sig.module_name ?? `Signal ${i + 1}`).replace(/_/g, ' ')}</p>
             <p className={`text-xs font-semibold mt-0.5 ${
               sig.value === 'BULLISH' ? 'text-emerald-400' :
               sig.value === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
