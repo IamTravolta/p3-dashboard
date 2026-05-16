@@ -16,25 +16,30 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const CACHE_HOURS = 4
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url)
+    const forceRefresh = searchParams.get('refresh') === '1'
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Check cache
-    const cutoff = new Date(Date.now() - CACHE_HOURS * 3600 * 1000).toISOString()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: cached } = await (supabase as any)
-      .from('briefings')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('generated_at', cutoff)
-      .order('generated_at', { ascending: false })
-      .limit(1)
-      .single()
+    // Check cache (skip on ?refresh=1)
+    if (!forceRefresh) {
+      const cutoff = new Date(Date.now() - CACHE_HOURS * 3600 * 1000).toISOString()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: cached } = await (supabase as any)
+        .from('briefings')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('generated_at', cutoff)
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .single()
 
-    if (cached) return NextResponse.json({ briefing: cached, cached: true })
+      if (cached) return NextResponse.json({ briefing: cached, cached: true })
+    }
 
     // ── Gather portfolio context ──────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
