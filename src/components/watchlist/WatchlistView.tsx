@@ -129,13 +129,13 @@ export default function WatchlistView() {
       ) : (
         <div className="rounded-xl border border-zinc-800 overflow-hidden">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_80px_80px_80px_80px_auto] gap-0 border-b border-zinc-800 bg-zinc-950 px-4 py-2">
+          <div className="grid grid-cols-[1fr_80px_80px_64px_90px_auto] gap-x-2 border-b border-zinc-800 bg-zinc-950 px-4 py-2">
             <span className="text-xs text-zinc-600 font-medium">Ticker</span>
             <span className="text-xs text-zinc-600 font-medium text-right">Price</span>
             <span className="text-xs text-zinc-600 font-medium text-right">Target</span>
             <span className="text-xs text-zinc-600 font-medium text-right">Score</span>
             <span className="text-xs text-zinc-600 font-medium text-right">Conv.</span>
-            <span className="text-xs text-zinc-600 font-medium text-right pr-1">Actions</span>
+            <span className="text-xs text-zinc-600 font-medium text-right pr-2">Actions</span>
           </div>
 
           {/* Rows */}
@@ -160,7 +160,7 @@ export default function WatchlistView() {
                   {/* Main row */}
                   <div
                     className={`
-                      group grid grid-cols-[1fr_80px_80px_80px_80px_auto] gap-0 items-center
+                      group grid grid-cols-[1fr_80px_80px_64px_90px_auto] gap-x-2 items-center
                       px-4 py-3 cursor-pointer transition
                       ${triggered ? 'bg-emerald-950/20 hover:bg-emerald-950/30' : 'hover:bg-zinc-800/40'}
                     `}
@@ -215,7 +215,7 @@ export default function WatchlistView() {
 
                     {/* Conviction */}
                     <div className="flex justify-end">
-                      <ConvictionDots level={item.conviction} />
+                      <ConvictionBadge level={item.conviction} />
                     </div>
 
                     {/* Actions */}
@@ -223,33 +223,30 @@ export default function WatchlistView() {
                       <button
                         onClick={() => runAnalysis(item)}
                         disabled={analyzing === item.ticker}
-                        title="Run analysis"
-                        className="rounded p-1 text-xs text-zinc-500 hover:text-indigo-400 hover:bg-indigo-900/30 disabled:opacity-40 transition"
+                        className="rounded px-2 py-1 text-[11px] font-medium text-indigo-400 hover:bg-indigo-900/30 disabled:opacity-40 transition whitespace-nowrap"
                       >
-                        {analyzing === item.ticker ? '⏳' : '🔬'}
+                        {analyzing === item.ticker ? 'Running…' : 'Analyse'}
                       </button>
                       <button
                         onClick={() => openEdit(item)}
-                        title="Edit"
-                        className="rounded p-1 text-xs text-zinc-500 hover:text-white hover:bg-zinc-700 transition"
+                        className="rounded px-2 py-1 text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-700/60 transition"
                       >
-                        ✎
+                        Edit
                       </button>
                       {deleteConfirm === item.id ? (
                         <button
                           onClick={() => handleDelete(item.id)}
                           disabled={deleting}
-                          className="rounded px-2 py-0.5 text-xs bg-red-900/50 text-red-300 hover:bg-red-800 transition"
+                          className="rounded px-2 py-1 text-[11px] font-medium bg-red-900/50 text-red-300 hover:bg-red-800 transition"
                         >
-                          {deleting ? '…' : 'Delete?'}
+                          {deleting ? '…' : 'Sure?'}
                         </button>
                       ) : (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
-                          title="Remove"
-                          className="rounded p-1 text-xs text-zinc-600 hover:text-red-400 hover:bg-red-900/20 transition"
+                          className="rounded px-2 py-1 text-[11px] font-medium text-zinc-600 hover:text-red-400 hover:bg-red-900/20 transition"
                         >
-                          ✕
+                          Remove
                         </button>
                       )}
                     </div>
@@ -354,16 +351,16 @@ interface SignalResult {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function ConvictionDots({ level }: { level: number }) {
+function ConvictionBadge({ level }: { level: number }) {
+  const config =
+    level >= 5 ? { label: 'Max',  cls: 'text-emerald-400 bg-emerald-900/30 border-emerald-800/50' } :
+    level >= 4 ? { label: 'High', cls: 'text-indigo-400  bg-indigo-900/30  border-indigo-800/50'  } :
+    level >= 3 ? { label: 'Med',  cls: 'text-yellow-400  bg-yellow-900/30  border-yellow-800/50'  } :
+                 { label: 'Low',  cls: 'text-zinc-400    bg-zinc-800/60    border-zinc-700/50'    }
   return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className={`h-1.5 w-1.5 rounded-full ${i <= level ? 'bg-indigo-500' : 'bg-zinc-700'}`}
-        />
-      ))}
-    </div>
+    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${config.cls}`}>
+      {config.label}
+    </span>
   )
 }
 
