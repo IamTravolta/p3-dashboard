@@ -34,6 +34,7 @@ export function useWatchlistData() {
   const setWatchlist = useDashboardStore((s) => s.setWatchlist)
   const setPrices    = useDashboardStore((s) => s.setPrices)
   const setSyncing   = useDashboardStore((s) => s.setSyncing)
+  const addAlert     = useDashboardStore((s) => s.addAlert)
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadWatchlist = useCallback(async () => {
@@ -54,14 +55,48 @@ export function useWatchlistData() {
       const param = items.map((w) => `${w.ticker}:${w.exchange}`).join(',')
       const resp  = await fetch(`/api/prices?tickers=${encodeURIComponent(param)}`)
       if (!resp.ok) return
-      const { prices } = await resp.json() as { prices: Record<string, number> }
-      setPrices(prices)
+      const { prices, prevPrices } = await resp.json() as { prices: Record<string, number>; prevPrices?: Record<string, number> }
+      setPrices(prices, prevPrices)
+
+      // Check for price and score trigger crossings
+      const existingAlerts = useDashboardStore.getState().alerts
+      for (const item of items) {
+        const livePrice = prices[item.ticker]
+
+        // Price trigger
+        if (item.priceTrigger != null && livePrice != null && livePrice <= item.priceTrigger) {
+          const hasUnread = existingAlerts.some(
+            (a) => !a.readAt && a.ticker === item.ticker && a.type === 'price'
+          )
+          if (!hasUnread) {
+            addAlert({
+              type: 'price',
+              ticker: item.ticker,
+              message: `${item.ticker} hit price trigger €${item.priceTrigger} — entry window open`,
+            })
+          }
+        }
+
+        // Score trigger
+        if (item.scoreTrigger != null && item.score >= item.scoreTrigger) {
+          const hasUnread = existingAlerts.some(
+            (a) => !a.readAt && a.ticker === item.ticker && a.type === 'score'
+          )
+          if (!hasUnread) {
+            addAlert({
+              type: 'score',
+              ticker: item.ticker,
+              message: `${item.ticker} score ${item.score} reached trigger ${item.scoreTrigger}`,
+            })
+          }
+        }
+      }
     } catch (err) {
       console.error('[useWatchlistData] prices:', err)
     } finally {
       setSyncing(false)
     }
-  }, [setSyncing, setPrices])
+  }, [setSyncing, setPrices, addAlert])
 
   useEffect(() => {
     loadWatchlist()

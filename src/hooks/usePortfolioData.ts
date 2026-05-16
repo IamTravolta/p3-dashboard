@@ -38,6 +38,7 @@ export function usePortfolioData() {
   const setLoading   = useDashboardStore((s) => s.setLoading)
   const setSyncing   = useDashboardStore((s) => s.setSyncing)
   const pricesLastFetched = useDashboardStore((s) => s.pricesLastFetched)
+  const addAlert     = useDashboardStore((s) => s.addAlert)
 
   const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -65,14 +66,33 @@ export function usePortfolioData() {
       const param = pos.map((p) => `${p.ticker}:${p.exchange}`).join(',')
       const resp = await fetch(`/api/prices?tickers=${encodeURIComponent(param)}`)
       if (!resp.ok) throw new Error('Price fetch failed')
-      const { prices } = await resp.json() as { prices: Record<string, number> }
-      setPrices(prices)
+      const { prices, prevPrices } = await resp.json() as { prices: Record<string, number>; prevPrices?: Record<string, number> }
+      setPrices(prices, prevPrices)
+
+      // Check for stop-loss threshold crossings
+      const existingAlerts = useDashboardStore.getState().alerts
+      for (const p of pos) {
+        const livePrice = prices[p.ticker]
+        if (livePrice == null || p.avgBuyPrice <= 0) continue
+        if (livePrice < p.avgBuyPrice * 0.85) {
+          const hasUnread = existingAlerts.some(
+            (a) => !a.readAt && a.ticker === p.ticker && a.type === 'price'
+          )
+          if (!hasUnread) {
+            addAlert({
+              type: 'price',
+              ticker: p.ticker,
+              message: `${p.ticker} is down >15% from avg buy — review position`,
+            })
+          }
+        }
+      }
     } catch (err) {
       console.error('[usePortfolioData] refreshPrices:', err)
     } finally {
       setSyncing(false)
     }
-  }, [setSyncing, setPrices])
+  }, [setSyncing, setPrices, addAlert])
 
   // ── On mount: load positions then immediately fetch prices ──────────────────
   useEffect(() => {

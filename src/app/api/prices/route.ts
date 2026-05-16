@@ -42,8 +42,9 @@ export async function GET(request: NextRequest) {
 
   const quotes = await fetchStooqPrices(items)
 
-  // Build a simple price map: { AAPL: 213.45, SHEL: 28.10, ... }
-  const prices: Record<string, number> = {}
+  // Build price maps: { AAPL: 213.45 } and prevPrices: { AAPL: 211.20 }
+  const prices:     Record<string, number> = {}
+  const prevPrices: Record<string, number> = {}
   const meta: Record<string, { volume: number; stale: boolean; date: string }> = {}
 
   for (const [ticker, q] of Object.entries(quotes)) {
@@ -51,12 +52,13 @@ export async function GET(request: NextRequest) {
     // fall back to their stored currentPrice via `prices[ticker] ?? storedPrice`
     if (!q.stale && q.price > 0) {
       prices[ticker] = q.price
+      if (q.prevClose > 0) prevPrices[ticker] = q.prevClose
     }
     meta[ticker] = { volume: q.volume, stale: q.stale, date: q.date }
   }
 
   return NextResponse.json(
-    { prices, meta },
+    { prices, prevPrices, meta },
     {
       headers: {
         'Cache-Control': `public, s-maxage=${CACHE_TTL}, stale-while-revalidate=30`,

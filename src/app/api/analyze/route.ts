@@ -134,6 +134,20 @@ export async function POST(req: NextRequest) {
 
     if (verdictErr) console.error('Verdict insert error:', verdictErr)
 
+    // ── Seed verdict_outcomes with entry price so /api/outcomes can evaluate ──
+    if (savedVerdict?.id && tech.raw_data.price > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('verdict_outcomes')
+        .insert({
+          verdict_id:   savedVerdict.id,
+          user_id:      user.id,
+          ticker,
+          entry_price:  tech.raw_data.price,
+          entry_date:   now,
+        })
+    }
+
     // ── Persist speculation score ─────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)

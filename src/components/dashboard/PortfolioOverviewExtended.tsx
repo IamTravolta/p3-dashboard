@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import PortfolioOverview from './PortfolioOverview'
 import { useDashboardStore, usePositions, useWatchlist, usePrices, useSettings, useCash } from '@/lib/store'
 import type { Database } from '@/lib/types/database'
@@ -232,6 +233,140 @@ function CapStatusBars({
   )
 }
 
+// ── Verdict detail panel ───────────────────────────────────────────────────────
+
+interface VerdictData {
+  ticker:        string
+  final_verdict: string
+  confidence:    number
+  reasoning?:    string
+  logged_at:     string
+  outcomes?:     Array<{
+    days_since:       number
+    price_change_pct: number
+    outcome:          string
+  }>
+}
+
+function verdictBadgeColor(verdict: string): string {
+  if (verdict === 'BUY')  return 'bg-emerald-900/60 text-emerald-300 border-emerald-700'
+  if (verdict === 'SELL') return 'bg-red-900/60 text-red-300 border-red-700'
+  return 'bg-yellow-900/60 text-yellow-300 border-yellow-700'
+}
+
+function outcomeColor(outcome: string): string {
+  if (outcome === 'correct')     return 'text-emerald-400'
+  if (outcome === 'wrong')       return 'text-red-400'
+  if (outcome === 'missed_gain') return 'text-orange-400'
+  return 'text-zinc-400'
+}
+
+function TickerDetailPanel({ ticker }: { ticker: string }) {
+  const setActiveTicker = useDashboardStore((s) => s.setActiveTicker)
+  const [data,    setData]    = useState<VerdictData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!ticker) return
+    setLoading(true)
+    setError(null)
+    setData(null)
+
+    fetch(`/api/verdict?ticker=${encodeURIComponent(ticker)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.error) throw new Error(j.error)
+        setData(j)
+      })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load verdict'))
+      .finally(() => setLoading(false))
+  }, [ticker])
+
+  return (
+    <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5 space-y-4 animate-in slide-in-from-top-2 duration-200">
+      {/* Panel header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-lg font-bold text-white">{ticker}</span>
+          <span className="text-xs text-zinc-500">Latest verdict</span>
+        </div>
+        <button
+          onClick={() => setActiveTicker(null)}
+          className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white transition"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      {loading && (
+        <p className="text-sm text-zinc-500 animate-pulse">Loading verdict…</p>
+      )}
+
+      {error && (
+        <p className="text-sm text-red-400 rounded-lg bg-red-900/20 border border-red-800 px-3 py-2">{error}</p>
+      )}
+
+      {!loading && !error && !data && (
+        <p className="text-sm text-zinc-500 italic">No verdict on record for {ticker}.</p>
+      )}
+
+      {data && (
+        <div className="space-y-4">
+          {/* Verdict badge + confidence */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-bold ${verdictBadgeColor(data.final_verdict)}`}>
+              {data.final_verdict}
+            </span>
+            <div className="flex flex-col">
+              <span className="text-xs text-zinc-500">Confidence</span>
+              <span className="text-sm font-semibold text-white tabular-nums">
+                {(data.confidence * 100).toFixed(0)}%
+              </span>
+            </div>
+            <div className="flex flex-col ml-auto text-right">
+              <span className="text-xs text-zinc-500">Logged</span>
+              <span className="text-xs text-zinc-400">
+                {new Date(data.logged_at).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Reasoning */}
+          {data.reasoning && (
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Reasoning</h4>
+              <p className="text-sm text-zinc-300 leading-relaxed">{data.reasoning}</p>
+            </div>
+          )}
+
+          {/* Outcome history */}
+          {data.outcomes && data.outcomes.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Outcome history</h4>
+              <div className="flex flex-wrap gap-2">
+                {data.outcomes.map((o) => (
+                  <div
+                    key={o.days_since}
+                    className="rounded-lg border border-zinc-800 bg-zinc-800/50 px-3 py-2 text-center min-w-[72px]"
+                  >
+                    <div className="text-xs text-zinc-500">{o.days_since}d</div>
+                    <div className={`text-sm font-semibold tabular-nums ${o.price_change_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {o.price_change_pct >= 0 ? '+' : ''}{o.price_change_pct.toFixed(1)}%
+                    </div>
+                    <div className={`text-xs capitalize ${outcomeColor(o.outcome)}`}>{o.outcome}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface PortfolioOverviewExtendedProps {
@@ -239,11 +374,12 @@ interface PortfolioOverviewExtendedProps {
 }
 
 export default function PortfolioOverviewExtended({ initialPositions }: PortfolioOverviewExtendedProps) {
-  const positions = usePositions()
-  const watchlist = useWatchlist()
-  const prices    = usePrices()
-  const cash      = useCash()
-  const settings  = useSettings()
+  const positions    = usePositions()
+  const watchlist    = useWatchlist()
+  const prices       = usePrices()
+  const cash         = useCash()
+  const settings     = useSettings()
+  const activeTicker = useDashboardStore((s) => s.activeTicker)
 
   return (
     <div className="space-y-5">
@@ -257,6 +393,11 @@ export default function PortfolioOverviewExtended({ initialPositions }: Portfoli
 
         {/* Position Heatmap */}
         <PositionHeatmap positions={positions} prices={prices} />
+
+        {/* Active ticker verdict panel — slides in below heatmap */}
+        {activeTicker && (
+          <TickerDetailPanel ticker={activeTicker} />
+        )}
 
         {/* Cap Status Bars */}
         <CapStatusBars

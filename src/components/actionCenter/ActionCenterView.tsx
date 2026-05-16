@@ -1,6 +1,7 @@
 'use client'
 
-import { usePositions, useWatchlist, usePrices } from '@/lib/store'
+import { useState, useEffect } from 'react'
+import { usePositions, useWatchlist, usePrices, useRailwayUrl } from '@/lib/store'
 import type { Position, WatchlistItem } from '@/lib/types/database'
 import type { FactorScores } from '@/lib/types/database'
 
@@ -185,7 +186,37 @@ function TierSection({ tier, alerts }: { tier: AlertTier; alerts: ComputedAlert[
   )
 }
 
-function EarningsPlaceholder() {
+type EarningsState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | { status: 'success'; items: any[] }
+
+function EarningsSection({ tickers, railwayConfigured }: { tickers: string[]; railwayConfigured: boolean }) {
+  const [state, setState] = useState<EarningsState>({ status: 'idle' })
+
+  useEffect(() => {
+    if (!railwayConfigured || tickers.length === 0) return
+
+    setState({ status: 'loading' })
+    fetch(`/api/railway/earnings?tickers=${encodeURIComponent(tickers.join(','))}`)
+      .then(async (resp) => {
+        const json = await resp.json()
+        if (!resp.ok) {
+          setState({ status: 'error', message: json.error ?? `HTTP ${resp.status}` })
+          return
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw: any = json
+        const items = Array.isArray(raw) ? raw : Array.isArray(raw?.earnings) ? raw.earnings : Array.isArray(raw?.data) ? raw.data : []
+        setState({ status: 'success', items })
+      })
+      .catch((err) => {
+        setState({ status: 'error', message: err instanceof Error ? err.message : 'Fetch failed' })
+      })
+  }, [tickers.join(','), railwayConfigured]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <section>
       <div className="flex items-center gap-2 mb-3">
@@ -193,12 +224,66 @@ function EarningsPlaceholder() {
           Earnings This Week
         </h3>
       </div>
-      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center">
-        <p className="text-sm text-zinc-500 mb-1">No earnings data available</p>
-        <p className="text-xs text-zinc-600">
-          Connect your Railway backend to see upcoming earnings
-        </p>
-      </div>
+
+      {!railwayConfigured ? (
+        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center">
+          <p className="text-sm text-zinc-500 mb-1">Connect Railway to see earnings calendar</p>
+        </div>
+      ) : tickers.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center">
+          <p className="text-sm text-zinc-500">Add positions to track their earnings</p>
+        </div>
+      ) : state.status === 'loading' ? (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center">
+          <p className="text-sm text-zinc-500">Loading earnings…</p>
+        </div>
+      ) : state.status === 'error' ? (
+        <div className="rounded-xl border border-red-800 bg-red-900/20 px-4 py-3 text-xs text-red-400">
+          {state.message}
+        </div>
+      ) : state.status === 'success' && state.items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center">
+          <p className="text-sm text-zinc-500">No upcoming earnings found for your positions.</p>
+        </div>
+      ) : state.status === 'success' ? (
+        <div className="space-y-2">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {state.items.map((item: any, i: number) => {
+            const ticker     = item.ticker      ?? item.symbol    ?? '—'
+            const date       = item.date        ?? item.report_date ?? item.earnings_date ?? null
+            const epsEst     = item.eps_estimate ?? item.eps       ?? item.estimate       ?? null
+            const importance = item.importance  ?? item.priority  ?? null
+
+            return (
+              <div
+                key={i}
+                className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 flex items-center gap-3"
+              >
+                <span className="font-mono text-sm font-bold text-white w-16 shrink-0">{ticker}</span>
+                <div className="flex-1 min-w-0">
+                  {date && (
+                    <p className="text-xs font-mono text-zinc-400">{new Date(date).toLocaleDateString()}</p>
+                  )}
+                  {epsEst != null && (
+                    <p className="text-xs text-zinc-500">EPS est: <span className="text-zinc-300">{epsEst}</span></p>
+                  )}
+                </div>
+                {importance && (
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    String(importance).toLowerCase() === 'high'
+                      ? 'bg-red-900/50 text-red-300'
+                      : String(importance).toLowerCase() === 'medium'
+                      ? 'bg-amber-900/50 text-amber-300'
+                      : 'bg-zinc-700 text-zinc-400'
+                  }`}>
+                    {importance}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -206,11 +291,13 @@ function EarningsPlaceholder() {
 // ── Main view ──────────────────────────────────────────────────────────────────
 
 export default function ActionCenterView() {
-  const positions = usePositions()
-  const watchlist = useWatchlist()
-  const prices    = usePrices()
+  const positions  = usePositions()
+  const watchlist  = useWatchlist()
+  const prices     = usePrices()
+  const railwayUrl = useRailwayUrl()
 
   const allAlerts = buildComputedAlerts(positions, watchlist, prices)
+  const tickers   = positions.map((p) => p.ticker)
 
   const actionAlerts      = allAlerts.filter(a => a.tier === 'ACTION')
   const investigateAlerts = allAlerts.filter(a => a.tier === 'INVESTIGATE')
@@ -240,8 +327,8 @@ export default function ActionCenterView() {
         <TierSection tier="MONITOR"     alerts={monitorAlerts}     />
       </div>
 
-      {/* Earnings placeholder */}
-      <EarningsPlaceholder />
+      {/* Earnings */}
+      <EarningsSection tickers={tickers} railwayConfigured={Boolean(railwayUrl)} />
     </div>
   )
 }

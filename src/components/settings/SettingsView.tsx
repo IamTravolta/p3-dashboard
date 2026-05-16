@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Save, RefreshCw, Download, Upload, Link } from 'lucide-react'
 import { useDashboardStore } from '@/lib/store'
 
@@ -39,6 +39,7 @@ export default function SettingsView() {
   const [loading,  setLoading]  = useState(true)
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
+  const [toast,    setToast]    = useState<string | null>(null)
 
   // Railway section state
   const railwayUrl    = useDashboardStore((s) => s.railwayUrl)
@@ -57,6 +58,20 @@ export default function SettingsView() {
       .then((j) => { if (j.settings) setSettings(j.settings) })
       .finally(() => setLoading(false))
   }, [])
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3500)
+  }, [])
+
+  function handleThemeChange(value: string) {
+    setSettings((s) => ({ ...s, theme: value }))
+    if (value === 'light') {
+      showToast('Light mode coming soon — dark only for now')
+    }
+    // Persist preference so ThemeScript can read it on next load
+    try { localStorage.setItem('p3-theme', value) } catch {}
+  }
 
   const weightSum = Object.values(settings.factor_weights).reduce((a, b) => a + b, 0)
 
@@ -123,6 +138,12 @@ export default function SettingsView() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-200 shadow-xl animate-in slide-in-from-bottom-2 duration-200">
+          {toast}
+        </div>
+      )}
       <div>
         <h2 className="text-lg font-semibold text-white">Settings</h2>
         <p className="text-xs text-zinc-500 mt-0.5">Customise your dashboard behaviour and signal weights</p>
@@ -173,9 +194,9 @@ export default function SettingsView() {
           </select>
         </Field>
         <Field label="Theme">
-          <select value={settings.theme} onChange={(e) => setSettings((s) => ({ ...s, theme: e.target.value }))} className={SELECT}>
+          <select value={settings.theme} onChange={(e) => handleThemeChange(e.target.value)} className={SELECT}>
             <option value="dark">Dark</option>
-            <option value="light">Light (coming soon)</option>
+            <option value="light">Light</option>
           </select>
         </Field>
       </Section>
@@ -241,6 +262,7 @@ export default function SettingsView() {
             ))}
           </select>
         </Field>
+        <GenerateBriefingButton />
       </Section>
 
       {/* Portfolio Caps */}
@@ -337,6 +359,68 @@ export default function SettingsView() {
           <span className="text-xs text-red-400">Factor weights must sum to 100%</span>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── GenerateBriefingButton ─────────────────────────────────────────────────────
+
+function GenerateBriefingButton() {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [errMsg, setErrMsg] = useState<string | null>(null)
+
+  async function generate() {
+    setStatus('loading')
+    setErrMsg(null)
+    try {
+      const resp = await fetch('/api/briefing', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ force: true }),
+      })
+      const j = await resp.json()
+      if (!resp.ok) throw new Error(j.error ?? 'Failed to generate briefing')
+      setStatus('done')
+    } catch (e: unknown) {
+      setErrMsg(e instanceof Error ? e.message : 'Something went wrong')
+      setStatus('error')
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={generate}
+        disabled={status === 'loading'}
+        className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-50 transition"
+      >
+        {status === 'loading' ? (
+          <>
+            <RefreshCw size={13} className="animate-spin" />
+            Generating…
+          </>
+        ) : (
+          'Generate Briefing Now'
+        )}
+      </button>
+
+      {status === 'done' && (
+        <p className="text-xs text-emerald-400">
+          Done!{' '}
+          <button
+            onClick={() => {
+              useDashboardStore.getState().setActiveGroup('briefing', 'briefing')
+            }}
+            className="underline hover:text-emerald-300 transition"
+          >
+            Go to Briefing tab
+          </button>
+        </p>
+      )}
+
+      {status === 'error' && (
+        <p className="text-xs text-red-400">{errMsg ?? 'Generation failed'}</p>
+      )}
     </div>
   )
 }

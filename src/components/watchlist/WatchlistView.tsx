@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDashboardStore } from '@/lib/store'
 import { useWatchlistData } from '@/hooks/useWatchlistData'
 import AddWatchlistModal from './AddWatchlistModal'
@@ -11,6 +11,8 @@ export default function WatchlistView() {
   const removeWatchlistItem = useDashboardStore((s) => s.removeWatchlistItem)
   const prices              = useDashboardStore((s) => s.prices)
   const railwayUrl          = useDashboardStore((s) => s.railwayUrl)
+  const signalCache         = useDashboardStore((s) => s.signalCache)
+  const setSignalCache      = useDashboardStore((s) => s.setSignalCache)
 
   const [modalOpen,     setModalOpen]     = useState(false)
   const [editTarget,    setEditTarget]    = useState<Parameters<typeof AddWatchlistModal>[0]['editItem']>(undefined)
@@ -19,6 +21,20 @@ export default function WatchlistView() {
   const [analyzing,     setAnalyzing]     = useState<string | null>(null)
   const [signalResults, setSignalResults] = useState<Record<string, SignalResult>>({})
   const [expanded,      setExpanded]      = useState<Record<string, boolean>>({})
+
+  // Initialise signalResults from the store cache on mount so results survive tab switches
+  useEffect(() => {
+    const fromCache: Record<string, SignalResult> = {}
+    for (const [ticker, cached] of Object.entries(signalCache)) {
+      if (cached && typeof cached === 'object' && 'verdict' in cached) {
+        fromCache[ticker] = cached as unknown as SignalResult
+      }
+    }
+    if (Object.keys(fromCache).length > 0) {
+      setSignalResults((prev) => ({ ...fromCache, ...prev }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { loadWatchlist } = useWatchlistData()
 
@@ -83,6 +99,22 @@ export default function WatchlistView() {
         setSignalResults((r) => ({ ...r, [item.ticker]: { error: data.error! } }))
       } else {
         setSignalResults((r) => ({ ...r, [item.ticker]: data }))
+        // Persist result in store cache so it survives tab switches
+        setSignalCache(item.ticker, {
+          signals:    (data.signals ?? []).reduce<Record<string, unknown>>((acc, sig, i) => {
+            acc[sig.module_name ?? `signal_${i}`] = sig
+            return acc
+          }, {}),
+          fetchedAt:  Date.now(),
+          verdict:    data.verdict
+            ? {
+                finalVerdict: data.verdict.verdict ?? data.verdict.finalVerdict ?? 'HOLD',
+                confidence:   data.verdict.confidence,
+                reasoning:    data.verdict.reasoning,
+              }
+            : undefined,
+          ...(data.speculation ? { speculation: data.speculation } : {}),
+        } as Parameters<typeof setSignalCache>[1])
       }
     } catch {
       setSignalResults((r) => ({ ...r, [item.ticker]: { error: 'Analysis failed' } }))
@@ -434,8 +466,11 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
             )}
           </div>
           {result.speculation && (
-            <div className="rounded-lg bg-zinc-800/50 px-2 py-1 text-xs text-zinc-400">
-              Speculation: <span className="font-medium text-white">{result.speculation.score}/10</span> {result.speculation.label}
+            <div className="inline-flex items-center gap-1 rounded-lg border border-amber-800/50 bg-amber-900/20 px-2.5 py-1 text-xs font-medium text-amber-300">
+              <span className="text-zinc-400 font-normal">Speculation:</span>
+              {' '}{result.speculation.score}/10
+              <span className="text-amber-400/70">·</span>
+              {result.speculation.label}
             </div>
           )}
         </div>

@@ -30,6 +30,69 @@ function BackendBanner() {
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CatalystResults({ data }: { data: any }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items: any[] = Array.isArray(data) ? data : Array.isArray(data?.catalysts) ? data.catalysts : Array.isArray(data?.data) ? data.data : []
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-zinc-700 py-6 text-center">
+        <p className="text-xs text-zinc-500">No catalysts returned from backend.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2 mt-2">
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {items.map((item: any, i: number) => {
+        const eventType   = item.event_type   ?? item.type        ?? item.category ?? 'Event'
+        const date        = item.date          ?? item.event_date  ?? item.scheduled_at ?? null
+        const description = item.description   ?? item.title       ?? item.summary     ?? null
+        const ticker      = item.ticker        ?? item.symbol      ?? null
+        const importance  = item.importance    ?? item.priority    ?? item.impact      ?? null
+
+        return (
+          <div key={i} className="rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-3 flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                {ticker && (
+                  <span className="rounded-full bg-indigo-900/50 border border-indigo-700/60 px-2 py-0.5 text-xs font-mono font-semibold text-indigo-300">
+                    {ticker}
+                  </span>
+                )}
+                <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-xs text-zinc-300 font-medium">
+                  {eventType}
+                </span>
+                {importance && (
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    String(importance).toLowerCase() === 'high'
+                      ? 'bg-red-900/50 text-red-300'
+                      : String(importance).toLowerCase() === 'medium'
+                      ? 'bg-amber-900/50 text-amber-300'
+                      : 'bg-zinc-700 text-zinc-400'
+                  }`}>
+                    {importance}
+                  </span>
+                )}
+                {date && (
+                  <span className="text-xs font-mono text-zinc-500 ml-auto">
+                    {new Date(date).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              {description && (
+                <p className="text-xs text-zinc-400 leading-relaxed">{description}</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function CatalystCard({ ticker }: { ticker: string }) {
   const [state, setState] = useState<CatalystState>({
     loading: false,
@@ -101,11 +164,7 @@ function CatalystCard({ ticker }: { ticker: string }) {
       )}
 
       {state.data && !state.error && (
-        <div className="rounded-lg bg-zinc-800/50 border border-zinc-700 p-3">
-          <pre className="text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap break-words">
-            {JSON.stringify(state.data, null, 2)}
-          </pre>
-        </div>
+        <CatalystResults data={state.data} />
       )}
 
       {!state.loading && !state.data && !state.error && (
@@ -122,30 +181,10 @@ function CatalystCard({ ticker }: { ticker: string }) {
 function MarketEventsSection() {
   return (
     <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-5 py-5">
-      <div className="flex items-start gap-3">
-        <div className="text-2xl">🗓</div>
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-1">Market Events</h3>
-          <p className="text-xs text-zinc-500 leading-relaxed">
-            Fed meetings, CPI releases, options expiry, and other macro events that may
-            affect your portfolio will appear here once the Railway backend is connected.
-          </p>
-          <div className="mt-3 space-y-1.5">
-            {['FOMC Meeting', 'CPI Release', 'Options Expiry', 'NFP Report'].map((event) => (
-              <div
-                key={event}
-                className="flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2"
-              >
-                <span className="text-xs text-zinc-400">{event}</span>
-                <span className="text-xs font-mono text-zinc-600">—</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-zinc-600 mt-3">
-            Connect Railway backend in Settings to enable live market event tracking.
-          </p>
-        </div>
-      </div>
+      <h3 className="text-sm font-semibold text-white mb-1">Market Events</h3>
+      <p className="text-xs text-zinc-500 leading-relaxed">
+        Connect Railway backend in Settings to see upcoming catalysts.
+      </p>
     </div>
   )
 }

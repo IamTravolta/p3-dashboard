@@ -3,6 +3,22 @@
 import { useState } from 'react'
 import { usePositions, usePrices, useStats, useDashboardStore } from '@/lib/store'
 import type { Position, FactorScores } from '@/lib/types/database'
+import SellPositionModal from './SellPositionModal'
+
+// ── Analysis types ─────────────────────────────────────────────────────────────
+
+interface PositionAnalysisResult {
+  ticker?:      string
+  verdict?: {
+    verdict?:      string
+    finalVerdict?: string
+    confidence:    number
+    score?:        number
+    reasoning?:    string
+  }
+  speculation?: { score: number; label: string }
+  error?:       string
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -215,6 +231,44 @@ function PositionDetail({
 
 // ── Main row ───────────────────────────────────────────────────────────────────
 
+function PositionAnalysisResult({ result }: { result: PositionAnalysisResult }) {
+  if (result.error) {
+    return (
+      <div className="mt-2 rounded-lg bg-red-900/20 border border-red-800 px-3 py-2 text-xs text-red-400">
+        ⚠ {result.error}
+      </div>
+    )
+  }
+
+  const verdict      = result.verdict
+  const verdictLabel = verdict?.verdict ?? verdict?.finalVerdict ?? 'HOLD'
+  const verdictColor = verdictLabel === 'BUY'
+    ? 'text-emerald-400 bg-emerald-900/30 border-emerald-800'
+    : verdictLabel === 'SELL'
+    ? 'text-red-400 bg-red-900/30 border-red-800'
+    : 'text-yellow-400 bg-yellow-900/30 border-yellow-800'
+
+  return (
+    <div className="mt-2 flex items-center gap-2 flex-wrap">
+      {verdict && (
+        <div className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${verdictColor}`}>
+          {verdictLabel}
+          <span className="font-normal opacity-75">{(verdict.confidence * 100).toFixed(0)}% conf</span>
+          {verdict.score != null && (
+            <span className="font-normal opacity-75">· {verdict.score.toFixed(1)}/10</span>
+          )}
+        </div>
+      )}
+      {result.speculation && (
+        <div className="rounded-lg bg-zinc-800/50 border border-zinc-700 px-2 py-1 text-xs text-zinc-400">
+          Speculation: <span className="font-medium text-white">{result.speculation.score}/10</span>
+          {' · '}{result.speculation.label}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PositionRow({
   position,
   totalPortfolioValue,
@@ -224,6 +278,36 @@ function PositionRow({
 }) {
   const prices = usePrices()
   const [expanded, setExpanded] = useState(false)
+  const [analyzing, setAnalyzing]       = useState<string | null>(null)
+  const [analysisResult, setAnalysisResult] = useState<PositionAnalysisResult | null>(null)
+  const [sellOpen, setSellOpen] = useState(false)
+
+  async function runAnalysis() {
+    setAnalyzing(position.id)
+    try {
+      const resp = await fetch('/api/analyze', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          ticker:      position.ticker,
+          exchange:    position.exchange,
+          sector:      position.sector,
+          name:        position.name,
+          position_id: position.id,
+        }),
+      })
+      const data = await resp.json() as PositionAnalysisResult & { error?: string }
+      if (data.error) {
+        setAnalysisResult({ error: data.error })
+      } else {
+        setAnalysisResult(data)
+      }
+    } catch {
+      setAnalysisResult({ error: 'Analysis failed' })
+    } finally {
+      setAnalyzing(null)
+    }
+  }
 
   const livePrice = prices[position.ticker] ?? position.currentPrice
   const value = livePrice * position.shares
@@ -305,8 +389,33 @@ function PositionRow({
           </span>
         </div>
 
+        {/* Action buttons */}
+        <div className="ml-auto shrink-0 flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); runAnalysis() }}
+            disabled={analyzing === position.id}
+            className="rounded px-2 py-1 text-[11px] font-medium text-indigo-400 hover:bg-indigo-900/30 disabled:opacity-40 transition whitespace-nowrap"
+          >
+            {analyzing === position.id ? 'Running…' : 'Analyse'}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setSellOpen(true) }}
+            className="rounded px-2 py-1 text-[11px] font-medium text-red-400 hover:bg-red-900/30 transition whitespace-nowrap"
+          >
+            Sell
+          </button>
+        </div>
+
+        {sellOpen && (
+          <SellPositionModal
+            open={sellOpen}
+            onClose={() => setSellOpen(false)}
+            position={position}
+          />
+        )}
+
         {/* Expand chevron */}
-        <div className="ml-auto shrink-0">
+        <div className="shrink-0">
           <button
             onClick={() => setExpanded((e) => !e)}
             className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-white transition"
@@ -332,6 +441,14 @@ function PositionRow({
             position={position}
             onDelete={() => setExpanded(false)}
           />
+          {analysisResult && <PositionAnalysisResult result={analysisResult} />}
+        </div>
+      )}
+
+      {/* Inline analysis result when not expanded */}
+      {!expanded && analysisResult && (
+        <div className="px-4 pb-3">
+          <PositionAnalysisResult result={analysisResult} />
         </div>
       )}
     </div>

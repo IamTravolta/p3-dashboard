@@ -1,7 +1,7 @@
 'use client'
 
 import type { User } from '@supabase/supabase-js'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDashboardStore } from '@/lib/store'
 
@@ -137,14 +137,42 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const isSyncing         = useDashboardStore((s) => s.isSyncing)
   const pricesLastFetched = useDashboardStore((s) => s.pricesLastFetched)
   const alerts            = useDashboardStore((s) => s.alerts)
+  const markAlertRead     = useDashboardStore((s) => s.markAlertRead)
   const reset             = useDashboardStore((s) => s.reset)
   const supabase          = createClient()
+
+  const [bellOpen, setBellOpen] = useState(false)
+  const bellRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = alerts.filter((a) => !a.readAt).length
 
   useEffect(() => {
     setUserId(user.id)
   }, [user.id, setUserId])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!bellOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [bellOpen])
+
+  function timeAgo(iso: string) {
+    const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    if (sec < 60)        return `${sec}s ago`
+    if (sec < 3600)      return `${Math.floor(sec / 60)}m ago`
+    if (sec < 86400)     return `${Math.floor(sec / 3600)}h ago`
+    return `${Math.floor(sec / 86400)}d ago`
+  }
+
+  function handleMarkAllRead() {
+    alerts.filter((a) => !a.readAt).forEach((a) => markAlertRead(a.id))
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -155,6 +183,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const currentGroup = NAV_GROUPS.find((g) => g.id === activeGroup)
   const subTabs      = currentGroup?.subTabs ?? []
   const showSubNav   = subTabs.length > 1
+
+  const latestAlerts = alerts.slice(0, 10)
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -189,10 +219,57 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
             {/* Right cluster */}
             <div className="flex items-center gap-2 ml-2 shrink-0">
               <SyncStatus isSyncing={isSyncing} lastFetched={pricesLastFetched} />
-              <AlertBell
-                unread={unreadCount}
-                onClick={() => setActiveGroup('portfolio', 'action')}
-              />
+
+              {/* Bell with dropdown */}
+              <div ref={bellRef} className="relative">
+                <AlertBell
+                  unread={unreadCount}
+                  onClick={() => setBellOpen((o) => !o)}
+                />
+                {bellOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+                      <span className="text-sm font-semibold text-white">Alerts</span>
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-xs text-zinc-500 hover:text-zinc-300 transition"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+                    {/* Alert list */}
+                    <div className="max-h-80 overflow-y-auto">
+                      {latestAlerts.length === 0 ? (
+                        <p className="px-4 py-6 text-center text-xs text-zinc-600">No alerts yet</p>
+                      ) : (
+                        latestAlerts.map((alert) => (
+                          <button
+                            key={alert.id}
+                            onClick={() => {
+                              markAlertRead(alert.id)
+                              setBellOpen(false)
+                              setActiveGroup('portfolio', 'action')
+                            }}
+                            className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b border-zinc-800/50 hover:bg-zinc-800/30 transition ${!alert.readAt ? 'border-l-2 border-l-indigo-600' : ''}`}
+                          >
+                            {alert.ticker && (
+                              <span className="mt-0.5 shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300">
+                                {alert.ticker}
+                              </span>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-zinc-300 leading-snug">{alert.message}</p>
+                              <p className="text-[10px] text-zinc-600 mt-0.5">{timeAgo(alert.createdAt)}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <span className="hidden text-xs text-zinc-600 sm:block max-w-[140px] truncate">{user.email}</span>
               <button
                 onClick={handleSignOut}

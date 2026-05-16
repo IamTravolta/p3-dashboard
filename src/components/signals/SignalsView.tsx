@@ -39,6 +39,8 @@ export default function SignalsView() {
   const [reliability,  setReliability]  = useState<ReliabilityRow[]>([])
   const [loading,      setLoading]      = useState(true)
   const [activeVerdict, setActiveVerdict] = useState<string | null>(null)
+  const [evalLoading,  setEvalLoading]  = useState(false)
+  const [evalStatus,   setEvalStatus]   = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,6 +67,29 @@ export default function SignalsView() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const evaluateOutcomes = useCallback(async () => {
+    setEvalLoading(true)
+    setEvalStatus(null)
+    try {
+      const resp = await fetch('/api/outcomes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: resp.statusText }))
+        setEvalStatus(`Failed: ${err.error ?? resp.statusText}`)
+      } else {
+        setEvalStatus('Done — accuracy updated')
+        load()
+      }
+    } catch (err) {
+      setEvalStatus(`Failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setEvalLoading(false)
+    }
+  }, [load])
 
   const verdictColor = (v: string) =>
     v === 'BUY' ? 'text-emerald-400 bg-emerald-900/30' :
@@ -122,6 +147,20 @@ export default function SignalsView() {
             <div className="flex items-center gap-2 mb-3">
               <Zap size={14} className="text-amber-400" />
               <h3 className="text-sm font-medium text-zinc-300">Recent Verdicts</h3>
+              <div className="ml-auto flex items-center gap-2">
+                {evalStatus && (
+                  <span className={`text-xs ${evalStatus.startsWith('Failed') ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {evalStatus}
+                  </span>
+                )}
+                <button
+                  onClick={evaluateOutcomes}
+                  disabled={evalLoading}
+                  className="rounded border border-indigo-700 bg-transparent px-2.5 py-1 text-xs font-medium text-indigo-400 hover:bg-indigo-900/30 disabled:opacity-50 transition"
+                >
+                  {evalLoading ? 'Evaluating…' : 'Evaluate Outcomes'}
+                </button>
+              </div>
             </div>
             {verdicts.length === 0 ? (
               <p className="text-sm text-zinc-600">No verdicts yet. Run an analysis from Portfolio or Watchlist.</p>

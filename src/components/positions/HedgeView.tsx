@@ -67,10 +67,51 @@ function HedgeCard({ title, description, examples, icon }: HedgeCardProps) {
             ))}
           </div>
         </div>
-        <span className="shrink-0 rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs text-zinc-500">
-          Placeholder
-        </span>
       </div>
+    </div>
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function AiHedgeResults({ data }: { data: any }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items: any[] = Array.isArray(data) ? data : Array.isArray(data?.suggestions) ? data.suggestions : Array.isArray(data?.data) ? data.data : []
+
+  if (items.length === 0) {
+    return (
+      <div className="mt-4 rounded-lg border border-dashed border-zinc-700 py-6 text-center">
+        <p className="text-xs text-zinc-500">No hedge suggestions returned from backend.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-4 space-y-2">
+      <div className="text-xs font-medium text-zinc-400 mb-2">AI hedge suggestions:</div>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {items.map((item: any, i: number) => {
+        const instrument = item.instrument ?? item.ticker   ?? item.symbol ?? item.name ?? `Suggestion ${i + 1}`
+        const rationale  = item.rationale  ?? item.reason  ?? item.description ?? null
+        const weight     = item.weight     ?? item.weight_pct ?? item.allocation ?? null
+
+        return (
+          <div key={i} className="rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-3 flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-sm font-bold text-white">{instrument}</span>
+                {weight != null && (
+                  <span className="ml-auto rounded-full bg-indigo-900/40 border border-indigo-700/50 px-2 py-0.5 text-xs font-mono text-indigo-300">
+                    {typeof weight === 'number' ? `${weight}%` : weight}
+                  </span>
+                )}
+              </div>
+              {rationale && (
+                <p className="text-xs text-zinc-400 leading-relaxed">{rationale}</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -224,14 +265,14 @@ export default function HedgeView() {
 
         {/* Success state */}
         {fetchState.status === 'success' && (
-          <div className="mt-4">
-            <div className="mb-2 text-xs font-medium text-zinc-400">Results from Railway backend:</div>
-            <div className="rounded-lg bg-zinc-800/50 border border-zinc-700 p-3">
-              <pre className="text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap break-words">
-                {JSON.stringify(fetchState.data, null, 2)}
-              </pre>
-            </div>
-          </div>
+          <AiHedgeResults data={fetchState.data} />
+        )}
+
+        {/* Not configured state */}
+        {!backendConfigured && fetchState.status === 'idle' && (
+          <p className="mt-3 text-xs text-zinc-500">
+            Connect Railway to get AI hedge suggestions.
+          </p>
         )}
       </div>
 
