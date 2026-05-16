@@ -1,0 +1,105 @@
+'use client'
+
+import { useEffect, useCallback, useRef } from 'react'
+import { useDashboardStore } from '@/lib/store'
+import type { Database } from '@/lib/types/database'
+import type { Position } from '@/lib/types/database'
+
+type PositionRow = Database['public']['Tables']['positions']['Row']
+
+// Converts a Supabase DB row to the app-level Position shape
+function rowToPosition(row: PositionRow): Position {
+  const fs = (row.factor_scores ?? {}) as { q?: number; g?: number; v?: number; m?: number; s?: number }
+  return {
+    id:           row.id,
+    ticker:       row.ticker,
+    name:         row.name,
+    exchange:     row.exchange,
+    sector:       row.sector,
+    subIndustry:  row.sub_industry ?? '',
+    shares:       row.shares,
+    avgBuyPrice:  row.avg_buy_price,
+    currentPrice: row.current_price,
+    currency:     row.currency,
+    factorScores: { q: fs.q ?? 0, g: fs.g ?? 0, v: fs.v ?? 0, m: fs.m ?? 0, s: fs.s ?? 0 },
+    conviction:   row.conviction,
+    thesis:       row.thesis  ?? '',
+    notes:        row.notes   ?? '',
+    addedDate:    row.added_at,
+  }
+}
+
+const PRICE_REFRESH_INTERVAL = 60_000   // 1 minute
+
+export function usePortfolioData() {
+  const positions    = useDashboardStore((s) => s.positions)
+  const setPositions = useDashboardStore((s) => s.setPositions)
+  const setPrices    = useDashboardStore((s) => s.setPrices)
+  const setLoading   = useDashboardStore((s) => s.setLoading)
+  const setSyncing   = useDashboardStore((s) => s.setSyncing)
+  const pricesLastFetched = useDashboardStore((s) => s.pricesLastFetched)
+
+  const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // ── Load positions from Supabase ────────────────────────────────────────────
+  const loadPositions = useCallback(async () => {
+    setLoading(true)
+    try {
+      const resp = await fetch('/api/positions')
+      if (!resp.ok) throw new Error('Failed to load positions')
+      const { data } = await resp.json() as { data: PositionRow[] }
+      setPositions(data.map(rowToPosition))
+    } catch (err) {
+      console.error('[usePortfolioData] loadPositions:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [setLoading, setPositions])
+
+  // ── Refresh live prices via /api/prices ─────────────────────────────────────
+  const refreshPrices = useCallback(async (pos: Position[]) => {
+    if (pos.length === 0) return
+    setSyncing(true)
+    try {
+      // Build "AAPL,SHEL:LSE,ASML:AMS" query param
+      const param = pos.map((p) => `${p.ticker}:${p.exchange}`).join(',')
+      const resp = await fetch(`/api/prices?tickers=${encodeURIComponent(param)}`)
+      if (!resp.ok) throw new Error('Price fetch failed')
+      const { prices } = await resp.json() as { prices: Record<string, number> }
+      setPrices(prices)
+    } catch (err) {
+      console.error('[usePortfolioData] refreshPrices:', err)
+    } finally {
+      setSyncing(false)
+    }
+  }, [setSyncing, setPrices])
+
+  // ── On mount: load positions then immediately fetch prices ──────────────────
+  useEffect(() => {
+    loadPositions()
+  }, [loadPositions])
+
+  // ── Once positions are loaded, start the price refresh loop ─────────────────
+  useEffect(() => {
+    if (positions.length === 0) return
+
+    // Fetch immediately if stale (>1 min old) or never fetched
+    const now = Date.now()
+    const stale = !pricesLastFetched || (now - pricesLastFetched) > PRICE_REFRESH_INTERVAL
+    if (stale) {
+      refreshPrices(positions)
+    }
+
+    // Set up recurring refresh
+    if (priceTimerRef.current) clearInterval(priceTimerRef.current)
+    priceTimerRef.current = setInterval(() => {
+      refreshPrices(positions)
+    }, PRICE_REFRESH_INTERVAL)
+
+    return () => {
+      if (priceTimerRef.current) clearInterval(priceTimerRef.current)
+    }
+  }, [positions, pricesLastFetched, refreshPrices])
+
+  return { loadPositions, refreshPrices }
+}
