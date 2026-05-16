@@ -39,6 +39,6 @@
     "pnpm": ">=9.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["sharp", "unrs-resolver", "msw", "@img/sharp-linux-x64", "@img/sharp-linux-arm64"]
+    "ignoredBuiltDependencies": ["sharp", "unrs-resolver", "msw"]
   }
 }
