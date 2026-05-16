@@ -47,7 +47,11 @@ export async function GET(request: NextRequest) {
   const meta: Record<string, { volume: number; stale: boolean; date: string }> = {}
 
   for (const [ticker, q] of Object.entries(quotes)) {
-    prices[ticker] = q.price
+    // Only include valid (non-stale, non-zero) prices so callers can safely
+    // fall back to their stored currentPrice via `prices[ticker] ?? storedPrice`
+    if (!q.stale && q.price > 0) {
+      prices[ticker] = q.price
+    }
     meta[ticker] = { volume: q.volume, stale: q.stale, date: q.date }
   }
 
