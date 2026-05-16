@@ -291,7 +291,9 @@ export const useDashboardStore = create<DashboardState>()(
 
         // ── Prices ────────────────────────────────────────────
         setPrices: (prices) => {
-          set({ prices, pricesLastFetched: Date.now() })
+          // Merge into existing map — don't overwrite prices from other hooks
+          // (portfolio + watchlist both call setPrices independently)
+          set((s) => ({ prices: { ...s.prices, ...prices }, pricesLastFetched: Date.now() }))
           get().computeStats()
         },
 
@@ -328,7 +330,7 @@ export const useDashboardStore = create<DashboardState>()(
         setActiveGroup: (group, subTab) => {
           const defaults: Record<string, string> = {
             portfolio: 'overview', action: 'alerts',
-            pipeline: 'ideas', learnings: 'signals',
+            pipeline: 'watchlist', learnings: 'signals',
             briefing: 'briefing', settings: 'settings',
           }
           set({ activeGroup: group, activeSubTab: subTab ?? defaults[group] ?? 'overview' })
