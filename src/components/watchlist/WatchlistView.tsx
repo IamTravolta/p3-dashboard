@@ -19,6 +19,8 @@ export default function WatchlistView() {
   const [analyzing,    setAnalyzing]    = useState<string | null>(null)
   const [signalResults, setSignalResults] = useState<Record<string, SignalResult>>({})
 
+  const railwayUrl = useDashboardStore((s) => s.railwayUrl)
+
   const { loadWatchlist } = useWatchlistData()
 
   if (activeTab !== 'watchlist') return null
@@ -93,6 +95,14 @@ export default function WatchlistView() {
 
   return (
     <div className="space-y-5">
+      {/* Railway note */}
+      {!railwayUrl && (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2.5 text-xs text-zinc-500 flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-600 shrink-0" />
+          Connect Railway backend in Settings to enable live trigger signals
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-white">
@@ -138,8 +148,13 @@ export default function WatchlistView() {
                 <div className="flex items-start gap-4">
                   {/* Ticker block */}
                   <div className="min-w-[80px]">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-bold text-white text-base">{item.ticker}</span>
+                      {item.score >= 7 && (
+                        <span className="text-xs bg-emerald-900/40 text-emerald-300 border border-emerald-800 rounded-full px-2 py-0.5 font-semibold">
+                          KLAAR
+                        </span>
+                      )}
                       {triggered && (
                         <span className="text-xs bg-emerald-900/50 text-emerald-300 rounded px-1.5 py-0.5 font-medium animate-pulse">
                           🔔 Alert
@@ -214,6 +229,9 @@ export default function WatchlistView() {
 
                 {/* Factor scores mini bar */}
                 <FactorBar scores={item.factorScores} />
+
+                {/* Trigger status row */}
+                <TriggerStatusRow score={item.score} />
 
                 {/* Signal result */}
                 {result && <SignalResultPanel result={result} />}
@@ -356,6 +374,40 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
         ))}
       </div>
     </div>
+  )
+}
+
+function TriggerStatusRow({ score }: { score: number }) {
+  const fundamentalColor = score >= 7 ? 'bg-emerald-900/40 text-emerald-300 border-emerald-800'
+    : score >= 5 ? 'bg-yellow-900/40 text-yellow-300 border-yellow-800'
+    : 'bg-red-900/40 text-red-300 border-red-800'
+  const fundamentalLabel = score >= 7 ? 'Strong' : score >= 5 ? 'Moderate' : 'Weak'
+
+  return (
+    <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-zinc-600 mr-1">Triggers:</span>
+      <TriggerBadge label="Technical"    status="—" />
+      <TriggerBadge label="Fundamental"  status={fundamentalLabel} colorClass={fundamentalColor} />
+      <TriggerBadge label="Sentiment"    status="—" />
+      <TriggerBadge label="Momentum"     status="—" />
+    </div>
+  )
+}
+
+function TriggerBadge({
+  label,
+  status,
+  colorClass = 'bg-zinc-800 text-zinc-500 border-zinc-700',
+}: {
+  label:       string
+  status:      string
+  colorClass?: string
+}) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs ${colorClass}`}>
+      <span className="text-zinc-600 font-normal">{label}:</span>
+      <span className="font-medium">{status}</span>
+    </span>
   )
 }
 

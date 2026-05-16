@@ -96,10 +96,16 @@ interface DashboardState {
   stats:       PortfolioStats | null
 
   // ── UI state ───────────────────────────────────────────────
-  activeTab:   string
-  alerts:      Alert[]
-  isLoading:   boolean
-  isSyncing:   boolean
+  activeTab:    string   // legacy flat tab (kept for compat)
+  activeGroup:  string   // two-level nav: group
+  activeSubTab: string   // two-level nav: sub-tab within group
+  alerts:       Alert[]
+  isLoading:    boolean
+  isSyncing:    boolean
+  activeTicker: string | null  // ticker currently in detail view
+
+  // ── Railway backend ─────────────────────────────────────────
+  railwayUrl:  string
 
   // ── Actions ────────────────────────────────────────────────
   setUserId:        (id: string | null) => void
@@ -135,6 +141,10 @@ interface DashboardState {
 
   // UI
   setActiveTab:     (tab: string) => void
+  setActiveGroup:   (group: string, subTab?: string) => void
+  setActiveSubTab:  (subTab: string) => void
+  setActiveTicker:  (ticker: string | null) => void
+  setRailwayUrl:    (url: string) => void
   addAlert:         (alert: Omit<Alert, 'id' | 'createdAt'>) => void
   markAlertRead:    (id: string) => void
   clearAlerts:      () => void
@@ -210,6 +220,10 @@ export const useDashboardStore = create<DashboardState>()(
         signalCache:    {},
         stats:          null,
         activeTab:      'portfolio',
+        activeGroup:    'portfolio',
+        activeSubTab:   'overview',
+        activeTicker:   null,
+        railwayUrl:     '',
         alerts:         [],
         isLoading:      false,
         isSyncing:      false,
@@ -311,6 +325,19 @@ export const useDashboardStore = create<DashboardState>()(
         // ── UI ────────────────────────────────────────────────
         setActiveTab: (tab) => set({ activeTab: tab }),
 
+        setActiveGroup: (group, subTab) => {
+          const defaults: Record<string, string> = {
+            portfolio: 'overview', action: 'alerts',
+            pipeline: 'ideas', learnings: 'signals',
+            briefing: 'briefing', settings: 'settings',
+          }
+          set({ activeGroup: group, activeSubTab: subTab ?? defaults[group] ?? 'overview' })
+        },
+
+        setActiveSubTab: (subTab) => set({ activeSubTab: subTab }),
+        setActiveTicker: (ticker) => set({ activeTicker: ticker }),
+        setRailwayUrl:   (url) => set({ railwayUrl: url }),
+
         addAlert: (alert) => {
           const id = crypto.randomUUID()
           set((s) => ({
@@ -359,6 +386,10 @@ export const useDashboardStore = create<DashboardState>()(
             signalCache:       {},
             stats:             null,
             activeTab:         'portfolio',
+            activeGroup:       'portfolio',
+            activeSubTab:      'overview',
+            activeTicker:      null,
+            railwayUrl:        '',
             alerts:            [],
             isLoading:         false,
             isSyncing:         false,
@@ -376,6 +407,9 @@ export const useDashboardStore = create<DashboardState>()(
           settings:      state.settings,
           cash:          state.cash,
           activeTab:     state.activeTab,
+          activeGroup:   state.activeGroup,
+          activeSubTab:  state.activeSubTab,
+          railwayUrl:    state.railwayUrl,
           alerts:        state.alerts,
         }),
       }
@@ -395,6 +429,10 @@ export const usePrices        = () => useDashboardStore((s) => s.prices)
 export const useStats         = () => useDashboardStore((s) => s.stats)
 export const useAlerts        = () => useDashboardStore((s) => s.alerts)
 export const useActiveTab     = () => useDashboardStore((s) => s.activeTab)
+export const useActiveGroup   = () => useDashboardStore((s) => s.activeGroup)
+export const useActiveSubTab  = () => useDashboardStore((s) => s.activeSubTab)
+export const useActiveTicker  = () => useDashboardStore((s) => s.activeTicker)
+export const useRailwayUrl    = () => useDashboardStore((s) => s.railwayUrl)
 export const useIsLoading     = () => useDashboardStore((s) => s.isLoading)
 export const useIsSyncing     = () => useDashboardStore((s) => s.isSyncing)
 export const useSignalCache   = (ticker: string) =>
