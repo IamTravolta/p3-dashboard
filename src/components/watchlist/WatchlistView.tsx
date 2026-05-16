@@ -254,59 +254,64 @@ export default function WatchlistView() {
 
                   {/* Expanded detail panel */}
                   {isOpen && (
-                    <div className="border-t border-zinc-800/60 bg-zinc-950/60 px-6 py-4 space-y-4">
-                      {/* Reason */}
+                    <div className="border-t border-zinc-800/60 bg-zinc-900/30 px-4 sm:px-6 py-4 space-y-4">
+
+                      {/* Thesis */}
                       {item.reason && (
-                        <p className="text-xs text-zinc-400 leading-relaxed">
-                          <span className="text-zinc-600 mr-1">Thesis:</span>
+                        <p className="text-xs text-zinc-300 leading-relaxed border-l-2 border-indigo-700 pl-3">
                           {item.reason}
                         </p>
                       )}
 
-                      {/* Factor scores + metadata */}
-                      <div className="flex items-start gap-8 flex-wrap">
-                        {/* Factor bars */}
-                        <div>
-                          <p className="text-xs text-zinc-600 mb-2">Factor scores</p>
+                      {/* Two-column layout: factors left, metadata right */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        {/* Factor scores — horizontal bars */}
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Factor scores</p>
                           <FactorBar scores={item.factorScores} />
                         </div>
 
-                        {/* Metadata */}
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
-                          {item.sector && (
-                            <MetaRow label="Sector" value={item.sector} />
-                          )}
-                          {item.exchange && (
-                            <MetaRow label="Exchange" value={item.exchange} />
-                          )}
-                          {item.scoreTrigger != null && (
-                            <MetaRow label="Score trigger" value={String(item.scoreTrigger)} />
-                          )}
-                          {item.expiryDate && (
-                            <MetaRow
-                              label="Expiry"
-                              value={new Date(item.expiryDate).toLocaleDateString()}
-                              valueClass={isExpired ? 'text-red-400' : 'text-zinc-300'}
-                            />
-                          )}
-                          {item.addedDate && (
-                            <MetaRow label="Added" value={new Date(item.addedDate).toLocaleDateString()} />
-                          )}
+                        {/* Metadata pills */}
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Details</p>
+                          <div className="flex flex-wrap gap-2">
+                            {item.sector && <MetaPill label="Sector" value={item.sector} />}
+                            {item.exchange && <MetaPill label="Exchange" value={item.exchange} />}
+                            {item.scoreTrigger != null && <MetaPill label="Score trigger" value={String(item.scoreTrigger)} />}
+                            {item.priceTrigger != null && <MetaPill label="Price trigger" value={`€${item.priceTrigger}`} />}
+                            {item.expiryDate && (
+                              <MetaPill
+                                label="Expires"
+                                value={new Date(item.expiryDate).toLocaleDateString()}
+                                highlight={isExpired ? 'red' : undefined}
+                              />
+                            )}
+                            {item.addedDate && <MetaPill label="Added" value={new Date(item.addedDate).toLocaleDateString()} />}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Signal result */}
-                      {result && <SignalResultPanel result={result} />}
-
-                      {/* Analyze CTA if no result yet */}
-                      {!result && !analyzing && railwayUrl && (
+                      {/* Analyse CTA */}
+                      {!result && !analyzing && (
                         <button
                           onClick={() => runAnalysis(item)}
-                          className="rounded-lg bg-indigo-900/40 border border-indigo-800/60 px-4 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-800/60 transition"
+                          className="w-full sm:w-auto rounded-lg border border-indigo-800/60 bg-indigo-900/30 px-4 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-800/50 transition"
                         >
-                          🔬 Run signal analysis
+                          Run signal analysis
                         </button>
                       )}
+
+                      {/* Running indicator */}
+                      {analyzing === item.ticker && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-500">
+                          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                          Running analysis…
+                        </div>
+                      )}
+
+                      {/* Signal result */}
+                      {result && <SignalResultPanel result={result} />}
                     </div>
                   )}
                 </div>
@@ -365,25 +370,20 @@ function ConvictionBadge({ level }: { level: number }) {
 }
 
 function FactorBar({ scores }: { scores: FactorScores }) {
-  const labels = { q: 'Quality', g: 'Growth', v: 'Value', m: 'Momentum', s: 'Safety' } as const
+  const labels: Record<keyof FactorScores, string> = { q: 'Quality', g: 'Growth', v: 'Value', m: 'Momentum', s: 'Safety' }
   return (
-    <div className="flex gap-3 items-end">
+    <div className="space-y-1.5">
       {(Object.keys(labels) as (keyof FactorScores)[]).map((k) => {
         const val   = scores[k] ?? 0
-        const pct   = (val / 10) * 100
-        const color = val >= 7 ? 'bg-emerald-500' : val >= 5 ? 'bg-yellow-500' : val > 0 ? 'bg-red-500' : 'bg-zinc-700'
+        const pct   = Math.min((val / 10) * 100, 100)
+        const color = val >= 7 ? 'bg-emerald-500' : val >= 5 ? 'bg-yellow-500' : val > 0 ? 'bg-red-400' : 'bg-zinc-700'
         return (
-          <div key={k} className="flex flex-col items-center gap-1" title={`${labels[k]}: ${val}/10`}>
-            <span className="text-[10px] text-zinc-500 tabular-nums">{val > 0 ? val.toFixed(0) : '—'}</span>
-            <div className="w-4 bg-zinc-800 rounded-sm overflow-hidden" style={{ height: 28 }}>
-              {val > 0 && (
-                <div
-                  className={`${color} w-full transition-all`}
-                  style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }}
-                />
-              )}
+          <div key={k} className="flex items-center gap-2">
+            <span className="text-[10px] text-zinc-500 w-16 shrink-0">{labels[k]}</span>
+            <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
             </div>
-            <span className="text-[10px] text-zinc-600 font-medium">{k.toUpperCase()}</span>
+            <span className="text-[10px] tabular-nums text-zinc-400 w-5 text-right">{val > 0 ? val.toFixed(0) : '—'}</span>
           </div>
         )
       })}
@@ -391,13 +391,14 @@ function FactorBar({ scores }: { scores: FactorScores }) {
   )
 }
 
-function MetaRow({ label, value, valueClass = 'text-zinc-300' }: {
-  label: string; value: string; valueClass?: string
+function MetaPill({ label, value, highlight }: {
+  label: string; value: string; highlight?: 'red' | 'green'
 }) {
+  const valueClass = highlight === 'red' ? 'text-red-400' : highlight === 'green' ? 'text-emerald-400' : 'text-zinc-200'
   return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-xs text-zinc-600 whitespace-nowrap">{label}</span>
-      <span className={`text-xs ${valueClass}`}>{value}</span>
+    <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1">
+      <span className="text-[10px] text-zinc-600">{label}</span>
+      <span className={`text-[10px] font-semibold ${valueClass}`}>{value}</span>
     </div>
   )
 }
