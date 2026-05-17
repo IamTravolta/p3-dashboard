@@ -1,14 +1,5 @@
 'use client'
 
-/**
- * Routes the main content area based on the active tab in the Zustand store.
- *
- * Portfolio and Watchlist are passed as pre-rendered React nodes (server components),
- * so they benefit from Next.js server-side prefetching.
- *
- * All other tabs are lazy-loaded client components.
- */
-
 import { useDashboardStore } from '@/lib/store'
 import TabContent            from './TabContent'
 
@@ -18,10 +9,12 @@ interface TabContentRouterProps {
 }
 
 export default function TabContentRouter({ portfolioTab, watchlistTab }: TabContentRouterProps) {
-  const activeTab = useDashboardStore((s) => s.activeTab)
+  const activeGroup  = useDashboardStore((s) => s.activeGroup)
+  const activeSubTab = useDashboardStore((s) => s.activeSubTab)
 
-  if (activeTab === 'portfolio') return <>{portfolioTab}</>
-  if (activeTab === 'watchlist') return <>{watchlistTab}</>
+  // Portfolio overview and watchlist are server-rendered nodes passed as props
+  if (activeGroup === 'portfolio' && activeSubTab === 'overview') return <>{portfolioTab}</>
+  if (activeGroup === 'pipeline' && activeSubTab === 'watchlist') return <>{watchlistTab}</>
 
   return <TabContent />
 }

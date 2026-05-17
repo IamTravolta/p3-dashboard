@@ -87,6 +87,7 @@ interface DashboardState {
 
   // ── Live prices (in-memory only, not persisted) ────────────
   prices:      PriceMap
+  prevPrices:  PriceMap   // previous session close — for day change
   pricesLastFetched: number | null
 
   // ── Signals cache (in-memory) ──────────────────────────────
@@ -96,10 +97,15 @@ interface DashboardState {
   stats:       PortfolioStats | null
 
   // ── UI state ───────────────────────────────────────────────
-  activeTab:   string
-  alerts:      Alert[]
-  isLoading:   boolean
-  isSyncing:   boolean
+  activeGroup:  string   // two-level nav: group
+  activeSubTab: string   // two-level nav: sub-tab within group
+  alerts:       Alert[]
+  isLoading:    boolean
+  isSyncing:    boolean
+  activeTicker: string | null  // ticker currently in detail view
+
+  // ── Railway backend ─────────────────────────────────────────
+  railwayUrl:  string
 
   // ── Actions ────────────────────────────────────────────────
   setUserId:        (id: string | null) => void
@@ -123,7 +129,7 @@ interface DashboardState {
   setCash:          (amount: number) => void
 
   // Prices
-  setPrices:        (prices: PriceMap) => void
+  setPrices:        (prices: PriceMap, prevPrices?: PriceMap) => void
   updatePrice:      (ticker: string, price: number) => void
 
   // Signals
@@ -134,7 +140,10 @@ interface DashboardState {
   computeStats:     () => void
 
   // UI
-  setActiveTab:     (tab: string) => void
+  setActiveGroup:   (group: string, subTab?: string) => void
+  setActiveSubTab:  (subTab: string) => void
+  setActiveTicker:  (ticker: string | null) => void
+  setRailwayUrl:    (url: string) => void
   addAlert:         (alert: Omit<Alert, 'id' | 'createdAt'>) => void
   markAlertRead:    (id: string) => void
   clearAlerts:      () => void
@@ -159,32 +168,39 @@ interface DashboardState {
 // ============================================================
 
 function computePortfolioStats(
-  positions: Position[],
-  prices:    PriceMap,
-  cash:      number,
-  currency:  string
+  positions:  Position[],
+  prices:     PriceMap,
+  prevPrices: PriceMap,
+  cash:       number,
+  currency:   string
 ): PortfolioStats {
-  let totalValue = 0
-  let totalCost  = 0
+  let totalValue     = 0
+  let totalCost      = 0
+  let totalDayChange = 0
 
   for (const p of positions) {
-    const price = prices[p.ticker] ?? p.currentPrice
-    totalValue += price * p.shares
-    totalCost  += p.avgBuyPrice * p.shares
+    const price     = prices[p.ticker] ?? p.currentPrice
+    const prevClose = prevPrices[p.ticker] ?? 0
+    totalValue     += price * p.shares
+    totalCost      += p.avgBuyPrice * p.shares
+    if (prevClose > 0) totalDayChange += (price - prevClose) * p.shares
   }
 
-  const totalPnL    = totalValue - totalCost
-  const totalPnLPct = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0
+  const totalPnL      = totalValue - totalCost
+  const totalPnLPct   = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0
   const totalWithCash = totalValue + cash
-  const cashPct     = totalWithCash > 0 ? (cash / totalWithCash) * 100 : 0
+  const cashPct       = totalWithCash > 0 ? (cash / totalWithCash) * 100 : 0
+  const dayChangePct  = (totalValue - totalDayChange) > 0
+    ? (totalDayChange / (totalValue - totalDayChange)) * 100
+    : 0
 
   return {
     totalValue,
     totalCost,
     totalPnL,
     totalPnLPct,
-    dayChange:    0,   // requires yesterday's close — filled by price fetcher
-    dayChangePct: 0,
+    dayChange:    totalDayChange,
+    dayChangePct,
     cashBuffer:   cash,
     cashPct,
   }
@@ -206,10 +222,14 @@ export const useDashboardStore = create<DashboardState>()(
         settings:       DEFAULT_SETTINGS,
         cash:           0,
         prices:         {},
+        prevPrices:     {},
         pricesLastFetched: null,
         signalCache:    {},
         stats:          null,
-        activeTab:      'portfolio',
+        activeGroup:    'action',
+        activeSubTab:   'action',
+        activeTicker:   null,
+        railwayUrl:     '',
         alerts:         [],
         isLoading:      false,
         isSyncing:      false,
@@ -276,8 +296,14 @@ export const useDashboardStore = create<DashboardState>()(
         },
 
         // ── Prices ────────────────────────────────────────────
-        setPrices: (prices) => {
-          set({ prices, pricesLastFetched: Date.now() })
+        setPrices: (prices, prevPrices) => {
+          // Merge into existing maps — don't overwrite prices from other hooks
+          // (portfolio + watchlist both call setPrices independently)
+          set((s) => ({
+            prices:     { ...s.prices, ...prices },
+            prevPrices: prevPrices ? { ...s.prevPrices, ...prevPrices } : s.prevPrices,
+            pricesLastFetched: Date.now(),
+          }))
           get().computeStats()
         },
 
@@ -304,12 +330,23 @@ export const useDashboardStore = create<DashboardState>()(
 
         // ── Stats ─────────────────────────────────────────────
         computeStats: () => {
-          const { positions, prices, cash, settings } = get()
-          set({ stats: computePortfolioStats(positions, prices, cash, settings.currency) })
+          const { positions, prices, prevPrices, cash, settings } = get()
+          set({ stats: computePortfolioStats(positions, prices, prevPrices, cash, settings.currency) })
         },
 
         // ── UI ────────────────────────────────────────────────
-        setActiveTab: (tab) => set({ activeTab: tab }),
+        setActiveGroup: (group, subTab) => {
+          const defaults: Record<string, string> = {
+            action: 'action', portfolio: 'overview',
+            pipeline: 'watchlist', learnings: 'signals',
+            briefing: 'briefing', settings: 'settings',
+          }
+          set({ activeGroup: group, activeSubTab: subTab ?? defaults[group] ?? 'overview' })
+        },
+
+        setActiveSubTab: (subTab) => set({ activeSubTab: subTab }),
+        setActiveTicker: (ticker) => set({ activeTicker: ticker }),
+        setRailwayUrl:   (url) => set({ railwayUrl: url }),
 
         addAlert: (alert) => {
           const id = crypto.randomUUID()
@@ -355,10 +392,14 @@ export const useDashboardStore = create<DashboardState>()(
             settings:          DEFAULT_SETTINGS,
             cash:              0,
             prices:            {},
+            prevPrices:        {},
             pricesLastFetched: null,
             signalCache:       {},
             stats:             null,
-            activeTab:         'portfolio',
+            activeGroup:       'action',
+            activeSubTab:      'action',
+            activeTicker:      null,
+            railwayUrl:        '',
             alerts:            [],
             isLoading:         false,
             isSyncing:         false,
@@ -375,7 +416,9 @@ export const useDashboardStore = create<DashboardState>()(
           soldPositions: state.soldPositions,
           settings:      state.settings,
           cash:          state.cash,
-          activeTab:     state.activeTab,
+          activeGroup:   state.activeGroup,
+          activeSubTab:  state.activeSubTab,
+          railwayUrl:    state.railwayUrl,
           alerts:        state.alerts,
         }),
       }
@@ -394,7 +437,10 @@ export const useCash          = () => useDashboardStore((s) => s.cash)
 export const usePrices        = () => useDashboardStore((s) => s.prices)
 export const useStats         = () => useDashboardStore((s) => s.stats)
 export const useAlerts        = () => useDashboardStore((s) => s.alerts)
-export const useActiveTab     = () => useDashboardStore((s) => s.activeTab)
+export const useActiveGroup   = () => useDashboardStore((s) => s.activeGroup)
+export const useActiveSubTab  = () => useDashboardStore((s) => s.activeSubTab)
+export const useActiveTicker  = () => useDashboardStore((s) => s.activeTicker)
+export const useRailwayUrl    = () => useDashboardStore((s) => s.railwayUrl)
 export const useIsLoading     = () => useDashboardStore((s) => s.isLoading)
 export const useIsSyncing     = () => useDashboardStore((s) => s.isSyncing)
 export const useSignalCache   = (ticker: string) =>

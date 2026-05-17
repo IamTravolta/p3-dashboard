@@ -4,10 +4,11 @@
  * Body: { ticker, exchange, sector, name, reason?, watchlist_id? }
  *
  * 1. Runs technical, polymarket, sentiment signal modules in parallel
- * 2. Produces verdict via Claude (or rule-based fallback)
- * 3. Saves signals + verdict to Supabase
- * 4. Optionally saves speculation score + volume snapshot
- * 5. Returns { signals, verdict, speculation }
+ * 2. Fetches fundamentals (FMP), macro regime (FRED), insider data (EDGAR) in parallel
+ * 3. Produces verdict via Claude — full context: signals + fundamentals + macro + insider
+ * 4. Saves signals + verdict to Supabase
+ * 5. Optionally saves speculation score + volume snapshot
+ * 6. Returns { signals, verdict, speculation, fundamentals, macro, insider }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -17,6 +18,9 @@ import { getPolymarketSignal }       from '@/lib/signals/polymarket'
 import { getSentimentSignal }        from '@/lib/signals/sentiment'
 import { getVerdict }                from '@/lib/signals/verdict'
 import { getSpeculationScore }       from '@/lib/signals/speculation'
+import { getFundamentalsBundle }     from '@/lib/utils/fmp'
+import { getMacroSnapshot }          from '@/lib/utils/fred'
+import { getInsiderTransactions }    from '@/lib/utils/edgar'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,15 +43,18 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // ── Run all signal modules in parallel ────────────────────────────────────
-    const [tech, poly, sent] = await Promise.all([
+    // ── Run all signal modules + external data in parallel ────────────────────
+    const [tech, poly, sent, fundamentals, macro, insider] = await Promise.all([
       getTechnicalSignal(ticker, exchange),
       getPolymarketSignal(sector),
       getSentimentSignal(ticker, sector, name, body.reason),
+      getFundamentalsBundle(ticker),
+      getMacroSnapshot(),
+      getInsiderTransactions(ticker),
     ])
 
-    // ── Verdict ───────────────────────────────────────────────────────────────
-    const verdict = await getVerdict(ticker, name, sector, tech, poly, sent)
+    // ── Verdict — now with full context ───────────────────────────────────────
+    const verdict = await getVerdict(ticker, name, sector, tech, poly, sent, fundamentals, macro, insider)
 
     // ── Speculation score ─────────────────────────────────────────────────────
     const spec = await getSpeculationScore(
@@ -65,40 +72,31 @@ export async function POST(req: NextRequest) {
 
     const signalRows = [
       {
-        user_id:      user.id,
+        user_id:    user.id,
         ticker,
-        module_name:  'technical',
-        value:        tech.value,
-        confidence:   tech.confidence,
-        reasoning:    tech.reasoning,
-        raw_data:     tech.raw_data as unknown as Record<string, unknown>,
-        generated_at: now,
-        watchlist_id: body.watchlist_id ?? null,
-        position_id:  body.position_id  ?? null,
+        module_name: 'technical',
+        value:       tech.value,
+        confidence:  tech.confidence,
+        reasoning:   tech.reasoning,
+        raw_data:    tech.raw_data as unknown as Record<string, unknown>,
       },
       {
-        user_id:      user.id,
+        user_id:    user.id,
         ticker,
-        module_name:  'polymarket',
-        value:        poly.value,
-        confidence:   poly.confidence,
-        reasoning:    poly.reasoning,
-        raw_data:     poly.raw_data as unknown as Record<string, unknown>,
-        generated_at: now,
-        watchlist_id: body.watchlist_id ?? null,
-        position_id:  body.position_id  ?? null,
+        module_name: 'polymarket',
+        value:       poly.value,
+        confidence:  poly.confidence,
+        reasoning:   poly.reasoning,
+        raw_data:    poly.raw_data as unknown as Record<string, unknown>,
       },
       {
-        user_id:      user.id,
+        user_id:    user.id,
         ticker,
-        module_name:  'sentiment',
-        value:        sent.value,
-        confidence:   sent.confidence,
-        reasoning:    sent.reasoning,
-        raw_data:     sent.raw_data as unknown as Record<string, unknown>,
-        generated_at: now,
-        watchlist_id: body.watchlist_id ?? null,
-        position_id:  body.position_id  ?? null,
+        module_name: 'sentiment',
+        value:       sent.value,
+        confidence:  sent.confidence,
+        reasoning:   sent.reasoning,
+        raw_data:    sent.raw_data as unknown as Record<string, unknown>,
       },
     ]
 
@@ -111,23 +109,26 @@ export async function POST(req: NextRequest) {
     if (signalErr) console.error('Signal insert error:', signalErr)
 
     // ── Persist verdict ───────────────────────────────────────────────────────
+    // modules_snapshot stores all three signal summaries for future reference
+    const modulesSnapshot = {
+      technical:  { value: tech.value,  confidence: tech.confidence,  reasoning: tech.reasoning  },
+      polymarket: { value: poly.value,  confidence: poly.confidence,  reasoning: poly.reasoning  },
+      sentiment:  { value: sent.value,  confidence: sent.confidence,  reasoning: sent.reasoning  },
+      score:      verdict.score,
+      reasoning:  verdict.reasoning,
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: savedVerdict, error: verdictErr } = await (supabase as any)
       .from('verdicts')
       .insert({
-        user_id:      user.id,
+        user_id:          user.id,
         ticker,
-        verdict:      verdict.verdict,
-        confidence:   verdict.confidence,
-        score:        verdict.score,
-        reasoning:    verdict.reasoning,
-        signals_used: verdict.signals_used,
-        generated_at: now,
-        watchlist_id: body.watchlist_id ?? null,
-        position_id:  body.position_id  ?? null,
-        evaluated_30d: false,
-        evaluated_60d: false,
-        evaluated_90d: false,
+        final_verdict:    verdict.verdict,
+        confidence:       verdict.confidence,
+        modules_snapshot: modulesSnapshot as unknown as Record<string, unknown>,
+        initial_price:    tech.raw_data.price > 0 ? tech.raw_data.price : 0,
+        logged_at:        now,
       })
       .select()
       .single()
@@ -139,24 +140,32 @@ export async function POST(req: NextRequest) {
     await (supabase as any)
       .from('speculation_scores')
       .insert({
-        user_id:    user.id,
+        user_id:          user.id,
         ticker,
-        score:      spec.score,
-        label:      spec.label,
-        factors:    spec.factors as unknown as Record<string, unknown>,
-        recorded_at: now,
+        speculation_score: spec.score,
+        beta:             spec.factors.beta_proxy,   // 0–10 proxy
+        momentum_score:   spec.factors.momentum,
+        valuation_score:  null,   // not computed in this module
+        iv_rank:          null,   // not computed in this module
+        logged_at:        now,
       })
 
     // ── Persist volume snapshot ───────────────────────────────────────────────
     if (tech.raw_data.price > 0) {
+      const direction: 'up' | 'down' | 'flat' =
+        tech.raw_data.rsi14 > 52 ? 'up' :
+        tech.raw_data.rsi14 < 48 ? 'down' : 'flat'
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from('volume_snapshots')
         .insert({
-          user_id:      user.id,
+          user_id:         user.id,
           ticker,
-          rel_volume:   tech.raw_data.relVolume,
-          recorded_at:  now,
+          volume:          (tech.raw_data as Record<string, unknown>).volume as number ?? 0,
+          relative_volume: tech.raw_data.relVolume,
+          price:           tech.raw_data.price,
+          direction,
         })
     }
 
@@ -165,29 +174,41 @@ export async function POST(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existing } = await (supabase as any)
         .from('signal_reliability')
-        .select('id, total_signals')
+        .select('id, total')
         .eq('user_id', user.id)
-        .eq('module_name', mod)
+        .eq('module_signal_key', mod)
         .single()
 
       if (existing) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any)
           .from('signal_reliability')
-          .update({ total_signals: (existing.total_signals ?? 0) + 1 })
+          .update({ total: (existing.total ?? 0) + 1, last_updated: now })
           .eq('id', existing.id)
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any)
           .from('signal_reliability')
-          .insert({ user_id: user.id, module_name: mod, total_signals: 1, correct_signals: 0 })
+          .insert({
+            user_id:           user.id,
+            module_signal_key: mod,
+            total:             1,
+            correct_30d:       0,
+            correct_60d:       0,
+            correct_90d:       0,
+            wrong_30d:         0,
+            last_updated:      now,
+          })
       }
     }
 
     return NextResponse.json({
-      signals:     savedSignals ?? signalRows,
-      verdict:     savedVerdict ?? { ...verdict, ticker, generated_at: now },
-      speculation: spec,
+      signals:      savedSignals ?? signalRows,
+      verdict:      savedVerdict ?? { final_verdict: verdict.verdict, confidence: verdict.confidence, ticker, logged_at: now },
+      speculation:  spec,
+      fundamentals,
+      macro,
+      insider,
     })
   } catch (err) {
     console.error('Analyze error:', err)

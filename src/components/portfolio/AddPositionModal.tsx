@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useDashboardStore } from '@/lib/store'
 import type { Database } from '@/lib/types/database'
 import type { FactorScores } from '@/lib/types/database'
+import PreTradeChecklist, { type ChecklistAnswers } from '@/components/positions/PreTradeChecklist'
 
 type PositionInsert = Omit<Database['public']['Tables']['positions']['Insert'], 'user_id'>
 
@@ -37,6 +38,20 @@ export default function AddPositionModal({ open, onClose, editPosition }: AddPos
   const upsertPosition = useDashboardStore((s) => s.upsertPosition)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
+
+  // Pre-trade checklist gate — only for new positions
+  const [checklistDone, setChecklistDone]   = useState(false)
+  const [checklistData, setChecklistData]   = useState<ChecklistAnswers | null>(null)
+  const [pendingTicker, setPendingTicker]   = useState('')
+
+  // Reset checklist state when modal opens/closes or when switching between add/edit
+  useEffect(() => {
+    if (!open) {
+      setChecklistDone(false)
+      setChecklistData(null)
+      setPendingTicker('')
+    }
+  }, [open, editPosition])
 
   const [form, setForm] = useState({
     ticker:        '',
@@ -172,6 +187,67 @@ export default function AddPositionModal({ open, onClose, editPosition }: AddPos
     }
   }
 
+  // Show checklist gate for new positions before form is visible
+  if (open && !editPosition && !checklistDone) {
+    const ticker = form.ticker.trim()
+
+    if (!ticker) {
+      // Step 1: collect ticker before showing checklist
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl p-6 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-white">Add Position</h2>
+              <p className="text-xs text-zinc-500 mt-1">Enter the ticker first — you will complete a pre-trade checklist before the position is added.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-zinc-400">Ticker *</label>
+              <input
+                autoFocus
+                value={form.ticker}
+                onChange={(e) => set('ticker', e.target.value.toUpperCase())}
+                onKeyDown={(e) => { if (e.key === 'Enter' && form.ticker.trim()) setPendingTicker(form.ticker.trim()) }}
+                placeholder="AAPL"
+                className={INPUT_CLS}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition">Cancel</button>
+              <button
+                onClick={() => { if (form.ticker.trim()) setPendingTicker(form.ticker.trim()) }}
+                disabled={!form.ticker.trim()}
+                className="px-5 py-2 rounded-lg bg-indigo-600 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition"
+              >
+                Continue to Checklist →
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Step 2: pre-trade checklist
+    return (
+      <PreTradeChecklist
+        ticker={ticker}
+        onCancel={onClose}
+        onSubmit={(answers) => {
+          setChecklistData(answers)
+          setChecklistDone(true)
+          const combinedThesis = [
+            `Thesis: ${answers.thesis}`,
+            `Catalyst: ${answers.catalyst}`,
+            `Invalidation: ${answers.invalidation}`,
+            `Stop loss: ${answers.stopLoss}`,
+            `Target: ${answers.target}`,
+            `Size rationale: ${answers.sizeRationale}`,
+          ].join('\n')
+          set('thesis', combinedThesis)
+        }}
+      />
+    )
+  }
+
   if (!open) return null
 
   const totalScore = (
@@ -187,9 +263,16 @@ export default function AddPositionModal({ open, onClose, editPosition }: AddPos
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-4">
-          <h2 className="text-base font-semibold text-white">
-            {editPosition ? 'Edit Position' : 'Add Position'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-white">
+              {editPosition ? 'Edit Position' : 'Add Position'}
+            </h2>
+            {checklistDone && (
+              <span className="rounded-full bg-emerald-900/40 border border-emerald-700/50 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+                ✓ Checklist complete
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white transition"

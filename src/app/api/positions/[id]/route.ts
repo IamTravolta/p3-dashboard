@@ -29,6 +29,23 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data)  return NextResponse.json({ error: 'Not found' },  { status: 404 })
+
+  // Non-blocking conviction snapshot — log but don't fail the request
+  ;(async () => {
+    try {
+      const updatedPosition = data
+      await (supabase as any).from('conviction_snapshots').insert({
+        user_id:       user.id,
+        ticker:        updatedPosition.ticker,
+        score:         updatedPosition.conviction ?? null,
+        factor_scores: updatedPosition.factor_scores ?? null,
+        logged_at:     new Date().toISOString(),
+      })
+    } catch (snapErr) {
+      console.error('[positions PATCH] conviction_snapshots insert failed:', snapErr)
+    }
+  })()
+
   return NextResponse.json({ data })
 }
 

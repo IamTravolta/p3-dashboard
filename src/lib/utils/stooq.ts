@@ -2,7 +2,7 @@
  * Stooq price fetcher
  *
  * Replicates the exact logic from the HTML dashboard's fetchLiveQuotesViaStooq().
- * Stooq CSV format with f=sd2t2ohlcv:
+ * Stooq CSV format with f=sd2t2ohlcvp:
  *   col[0] = symbol
  *   col[1] = date (YYYYMMDD)
  *   col[2] = time (HHMMSS)
@@ -10,7 +10,8 @@
  *   col[4] = high
  *   col[5] = low
  *   col[6] = close  ← price we use
- *   col[7] = volume  ← NOW also captured (was discarded in HTML version)
+ *   col[7] = volume
+ *   col[8] = prevClose ← previous session close (p format code)
  *
  * Exchange suffix mapping (same as HTML dashboard):
  *   NYSE / NASDAQ / AMEX   → no suffix  (e.g. AAPL)
@@ -22,15 +23,16 @@
  */
 
 export interface StooqQuote {
-  ticker:   string
-  price:    number
-  open:     number
-  high:     number
-  low:      number
-  volume:   number
-  date:     string  // YYYYMMDD
-  time:     string  // HHMMSS
-  stale:    boolean // true if market is closed / no data
+  ticker:    string
+  price:     number
+  prevClose: number  // previous session close — used for day change
+  open:      number
+  high:      number
+  low:       number
+  volume:    number
+  date:      string  // YYYYMMDD
+  time:      string  // HHMMSS
+  stale:     boolean // true if market is closed / no data
 }
 
 export type StooqQuoteMap = Record<string, StooqQuote>
@@ -60,7 +62,7 @@ export function stooqSymbol(ticker: string, exchange: string): string {
 // ── Batch fetcher ────────────────────────────────────────────────────────────
 
 const BATCH_SIZE = 40    // Stooq allows ~50 symbols per request; use 40 for safety
-const STOOQ_BASE = 'https://stooq.com/q/l/?f=sd2t2ohlcv&h&e=csv&s='
+const STOOQ_BASE = 'https://stooq.com/q/l/?f=sd2t2ohlcvp&h&e=csv&s='  // p = prev close
 
 export async function fetchStooqPrices(
   items: Array<{ ticker: string; exchange: string }>
@@ -104,24 +106,26 @@ export async function fetchStooqPrices(
         const stooqSym = cols[0].toLowerCase()
         const originalTicker = symbolMap[stooqSym] ?? stooqSym.toUpperCase()
 
-        const close  = parseFloat(cols[6])
-        const open   = parseFloat(cols[3])
-        const high   = parseFloat(cols[4])
-        const low    = parseFloat(cols[5])
-        const volume = parseInt(cols[7] ?? '0', 10)
+        const close     = parseFloat(cols[6])
+        const open      = parseFloat(cols[3])
+        const high      = parseFloat(cols[4])
+        const low       = parseFloat(cols[5])
+        const volume    = parseInt(cols[7] ?? '0', 10)
+        const prevClose = parseFloat(cols[8] ?? 'NaN')  // col[8] = p (prev close)
 
         // Stooq returns 'N/D' or 0 for missing data
         const stale = isNaN(close) || close === 0
 
         result[originalTicker] = {
-          ticker:  originalTicker,
-          price:   stale ? 0 : close,
-          open:    isNaN(open)   ? 0 : open,
-          high:    isNaN(high)   ? 0 : high,
-          low:     isNaN(low)    ? 0 : low,
-          volume:  isNaN(volume) ? 0 : volume,
-          date:    cols[1] ?? '',
-          time:    cols[2] ?? '',
+          ticker:    originalTicker,
+          price:     stale ? 0 : close,
+          prevClose: isNaN(prevClose) ? 0 : prevClose,
+          open:      isNaN(open)   ? 0 : open,
+          high:      isNaN(high)   ? 0 : high,
+          low:       isNaN(low)    ? 0 : low,
+          volume:    isNaN(volume) ? 0 : volume,
+          date:      cols[1] ?? '',
+          time:      cols[2] ?? '',
           stale,
         }
       }

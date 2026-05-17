@@ -19,7 +19,6 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
   const removePosition = useDashboardStore((s) => s.removePosition)
   const prices         = useDashboardStore((s) => s.prices)
   const stats          = useDashboardStore((s) => s.stats)
-  const activeTab      = useDashboardStore((s) => s.activeTab)
   const isLoading      = useDashboardStore((s) => s.isLoading)
   const isSyncing      = useDashboardStore((s) => s.isSyncing)
 
@@ -36,8 +35,6 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
 
   // Start live price refresh loop
   const { loadPositions } = usePortfolioData()
-
-  if (activeTab !== 'portfolio') return null
 
   // ── Derived totals ─────────────────────────────────────────────────────────
   const totalValue  = stats?.totalValue   ?? 0

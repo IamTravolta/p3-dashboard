@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Brain, TrendingUp, AlertCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 interface BehavioralEntry {
-  id:             string
-  ticker:         string
-  verdict:        'BUY' | 'SELL' | 'HOLD'
-  user_action:    'FOLLOWED' | 'OVERRIDDEN' | 'IGNORED'
-  override_reason: string | null
-  actual_outcome:  'WIN' | 'LOSS' | 'NEUTRAL' | null
-  created_at:     string
+  id:                    string
+  ticker:                string | null
+  action_type:           string
+  system_recommendation: string | null
+  user_action:           string
+  followed_advice:       boolean | null
+  context:               Record<string, unknown> | null
+  created_at:            string
 }
 
 interface Stats {
@@ -34,41 +34,28 @@ export default function BehavioralView() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
-        .from('behavioral_log')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100)
+      const resp = await fetch('/api/behavioral-log?limit=100')
+      if (!resp.ok) return
+      const { data } = await resp.json() as { data: BehavioralEntry[] }
 
       const rows = (data ?? []) as BehavioralEntry[]
       setEntries(rows)
 
       // Compute stats
-      const total       = rows.length
-      const followed    = rows.filter((r) => r.user_action === 'FOLLOWED').length
-      const overridden  = rows.filter((r) => r.user_action === 'OVERRIDDEN').length
-      const ignored     = rows.filter((r) => r.user_action === 'IGNORED').length
-
-      const followWins   = rows.filter((r) => r.user_action === 'FOLLOWED'   && r.actual_outcome === 'WIN').length
-      const overrideWins = rows.filter((r) => r.user_action === 'OVERRIDDEN' && r.actual_outcome === 'WIN').length
-      const followedEval   = rows.filter((r) => r.user_action === 'FOLLOWED'   && r.actual_outcome).length
-      const overriddenEval = rows.filter((r) => r.user_action === 'OVERRIDDEN' && r.actual_outcome).length
+      const total      = rows.length
+      const followed   = rows.filter((r) => r.followed_advice === true).length
+      const overridden = rows.filter((r) => r.followed_advice === false).length
+      const ignored    = rows.filter((r) => r.followed_advice === null).length
 
       setStats({
         totalVerdicts:   total,
         followed,
         overridden,
         ignored,
-        followWinRate:   followedEval   > 0 ? followWins   / followedEval   : 0,
-        overrideWinRate: overriddenEval > 0 ? overrideWins / overriddenEval : 0,
-        followedCount:   followedEval,
-        overriddenCount: overriddenEval,
+        followWinRate:   0,
+        overrideWinRate: 0,
+        followedCount:   followed,
+        overriddenCount: overridden,
       })
     } finally {
       setLoading(false)
@@ -77,22 +64,22 @@ export default function BehavioralView() {
 
   useEffect(() => { load() }, [load])
 
-  const actionColor = (a: string) =>
-    a === 'FOLLOWED' ? 'text-emerald-400 bg-emerald-900/30' :
-    a === 'OVERRIDDEN' ? 'text-amber-400 bg-amber-900/30' : 'text-zinc-400 bg-zinc-800'
+  const actionColor = (followed: boolean | null) =>
+    followed === true  ? 'text-emerald-400 bg-emerald-900/30' :
+    followed === false ? 'text-amber-400 bg-amber-900/30' : 'text-zinc-400 bg-zinc-800'
 
-  const outcomeColor = (o: string | null) =>
-    o === 'WIN' ? 'text-emerald-400' : o === 'LOSS' ? 'text-red-400' : 'text-zinc-500'
+  const actionLabel = (followed: boolean | null) =>
+    followed === true ? 'FOLLOWED' : followed === false ? 'OVERRIDDEN' : 'IGNORED'
 
   const insight = () => {
     if (!stats || stats.followedCount < 3 && stats.overriddenCount < 3) return null
-    if (stats.overrideWinRate > stats.followWinRate + 0.15) {
-      return { text: 'Your overrides are outperforming signal recommendations. Consider adjusting signal weights.', type: 'positive' }
+    if (stats.overriddenCount > stats.followedCount * 2) {
+      return { text: 'You override recommendations frequently. Review your system settings to see if calibration is needed.', type: 'positive' }
     }
-    if (stats.followWinRate > stats.overrideWinRate + 0.15) {
-      return { text: 'Following recommendations is more profitable than overriding. Trust the signals more.', type: 'info' }
+    if (stats.followedCount > stats.overriddenCount * 2) {
+      return { text: 'You follow recommendations closely. Consider whether personal conviction should play a larger role.', type: 'info' }
     }
-    return { text: 'Your override and follow win rates are similar. Signals and intuition align.', type: 'neutral' }
+    return { text: 'Your override and follow balance looks healthy. Signals and intuition appear aligned.', type: 'neutral' }
   }
 
   const ins = insight()
@@ -130,23 +117,25 @@ export default function BehavioralView() {
         </div>
       )}
 
-      {/* Win rates */}
-      {stats && (stats.followedCount > 0 || stats.overriddenCount > 0) && (
+      {/* Follow vs override breakdown */}
+      {stats && stats.totalVerdicts > 0 && (
         <div className="grid grid-cols-2 gap-3">
-          <WinRateCard
-            label="Follow win rate"
-            rate={stats.followWinRate}
-            count={stats.followedCount}
-            color="text-emerald-400"
-            icon={<TrendingUp size={14} />}
-          />
-          <WinRateCard
-            label="Override win rate"
-            rate={stats.overrideWinRate}
-            count={stats.overriddenCount}
-            color="text-amber-400"
-            icon={<Brain size={14} />}
-          />
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-emerald-400"><TrendingUp size={14} /></span>
+              <p className="text-xs text-zinc-400">Followed advice</p>
+            </div>
+            <p className="text-2xl font-bold text-emerald-400">{stats.followedCount}</p>
+            <p className="text-xs text-zinc-600 mt-1">decisions</p>
+          </div>
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-amber-400"><Brain size={14} /></span>
+              <p className="text-xs text-zinc-400">Overrode advice</p>
+            </div>
+            <p className="text-2xl font-bold text-amber-400">{stats.overriddenCount}</p>
+            <p className="text-xs text-zinc-600 mt-1">decisions</p>
+          </div>
         </div>
       )}
 
@@ -162,7 +151,7 @@ export default function BehavioralView() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-900/80">
-                {['Ticker', 'Verdict', 'Your action', 'Reason', 'Outcome', 'Date'].map((h) => (
+                {['Ticker', 'Action Type', 'Recommendation', 'Your action', 'Date'].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
                 ))}
               </tr>
@@ -170,20 +159,13 @@ export default function BehavioralView() {
             <tbody>
               {entries.map((e) => (
                 <tr key={e.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition">
-                  <td className="px-4 py-3 font-semibold text-white">{e.ticker}</td>
+                  <td className="px-4 py-3 font-semibold text-white">{e.ticker ?? '—'}</td>
+                  <td className="px-4 py-3 text-xs text-zinc-400">{e.action_type}</td>
+                  <td className="px-4 py-3 text-zinc-400 max-w-xs truncate">{e.system_recommendation ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${e.verdict === 'BUY' ? 'bg-emerald-900/40 text-emerald-400' : e.verdict === 'SELL' ? 'bg-red-900/40 text-red-400' : 'bg-zinc-800 text-zinc-400'}`}>
-                      {e.verdict}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${actionColor(e.followed_advice)}`}>
+                      {actionLabel(e.followed_advice)}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${actionColor(e.user_action)}`}>
-                      {e.user_action}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-400 max-w-xs truncate">{e.override_reason ?? '—'}</td>
-                  <td className={`px-4 py-3 text-xs font-medium ${outcomeColor(e.actual_outcome)}`}>
-                    {e.actual_outcome ?? 'Pending'}
                   </td>
                   <td className="px-4 py-3 text-xs text-zinc-500">{new Date(e.created_at).toLocaleDateString()}</td>
                 </tr>
@@ -208,51 +190,36 @@ function StatCard({ label, value, color = 'text-white' }: { label: string; value
   )
 }
 
-function WinRateCard({ label, rate, count, color, icon }: { label: string; rate: number; count: number; color: string; icon: React.ReactNode }) {
-  const pct = Math.round(rate * 100)
-  return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className={color}>{icon}</span>
-        <p className="text-xs text-zinc-400">{label}</p>
-      </div>
-      <p className={`text-2xl font-bold ${color}`}>{pct}%</p>
-      <div className="mt-2 h-1.5 w-full rounded-full bg-zinc-700">
-        <div className={`h-1.5 rounded-full ${color.replace('text-', 'bg-')}`} style={{ width: `${pct}%` }} />
-      </div>
-      <p className="text-xs text-zinc-600 mt-1">{count} evaluated trades</p>
-    </div>
-  )
-}
 
 /* ── Log decision modal ─────────────────────────────────────────────────────── */
 const INPUT = 'w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition'
 
 function LogDecisionModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
-    ticker: '', verdict: 'BUY', user_action: 'FOLLOWED', override_reason: '', actual_outcome: '',
+    ticker:                '',
+    action_type:           'TRADE_DECISION',
+    system_recommendation: '',
+    followed_advice:       'true',
+    context_note:          '',
   })
   const [loading, setLoading] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
-      .from('behavioral_log')
-      .insert({
-        user_id:         user.id,
-        ticker:          form.ticker.toUpperCase(),
-        verdict:         form.verdict,
-        user_action:     form.user_action,
-        override_reason: form.override_reason || null,
-        actual_outcome:  form.actual_outcome || null,
-        created_at:      new Date().toISOString(),
-      })
+    await fetch('/api/behavioral-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action_type:           form.action_type,
+        ticker:                form.ticker.toUpperCase() || null,
+        system_recommendation: form.system_recommendation || null,
+        user_action:           form.followed_advice === 'true' ? 'FOLLOWED' : form.followed_advice === 'false' ? 'OVERRIDDEN' : 'IGNORED',
+        followed_advice:       form.followed_advice === 'true' ? true : form.followed_advice === 'false' ? false : null,
+        context:               form.context_note ? { note: form.context_note } : null,
+      }),
+    })
 
     setLoading(false)
     onClose()
@@ -268,38 +235,31 @@ function LogDecisionModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={submit} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-zinc-400">Ticker</label>
-              <input required value={form.ticker} onChange={(e) => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} className={INPUT} placeholder="NVDA" />
+              <label className="text-xs text-zinc-400">Ticker (optional)</label>
+              <input value={form.ticker} onChange={(e) => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} className={INPUT} placeholder="NVDA" />
             </div>
             <div>
-              <label className="text-xs text-zinc-400">AI verdict was</label>
-              <select value={form.verdict} onChange={(e) => setForm(f => ({ ...f, verdict: e.target.value }))} className={INPUT}>
-                {['BUY','SELL','HOLD'].map(v => <option key={v}>{v}</option>)}
+              <label className="text-xs text-zinc-400">Action type</label>
+              <select value={form.action_type} onChange={(e) => setForm(f => ({ ...f, action_type: e.target.value }))} className={INPUT}>
+                {['TRADE_DECISION', 'REBALANCE', 'HEDGE', 'WATCHLIST_REVIEW', 'OTHER'].map(v => <option key={v}>{v}</option>)}
               </select>
             </div>
           </div>
           <div>
-            <label className="text-xs text-zinc-400">Your action</label>
-            <select value={form.user_action} onChange={(e) => setForm(f => ({ ...f, user_action: e.target.value }))} className={INPUT}>
-              <option value="FOLLOWED">FOLLOWED (did what was recommended)</option>
-              <option value="OVERRIDDEN">OVERRIDDEN (did the opposite)</option>
-              <option value="IGNORED">IGNORED (took no action)</option>
+            <label className="text-xs text-zinc-400">System recommendation</label>
+            <input value={form.system_recommendation} onChange={(e) => setForm(f => ({ ...f, system_recommendation: e.target.value }))} className={INPUT} placeholder="BUY, SELL, HOLD, or description…" />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400">Did you follow the recommendation?</label>
+            <select value={form.followed_advice} onChange={(e) => setForm(f => ({ ...f, followed_advice: e.target.value }))} className={INPUT}>
+              <option value="true">Yes — followed</option>
+              <option value="false">No — overridden</option>
+              <option value="null">Ignored / no action</option>
             </select>
           </div>
-          {form.user_action === 'OVERRIDDEN' && (
-            <div>
-              <label className="text-xs text-zinc-400">Why did you override?</label>
-              <textarea rows={2} value={form.override_reason} onChange={(e) => setForm(f => ({ ...f, override_reason: e.target.value }))} placeholder="Market conditions, personal conviction, news…" className={`${INPUT} resize-none`} />
-            </div>
-          )}
           <div>
-            <label className="text-xs text-zinc-400">Outcome (leave blank if pending)</label>
-            <select value={form.actual_outcome} onChange={(e) => setForm(f => ({ ...f, actual_outcome: e.target.value }))} className={INPUT}>
-              <option value="">Pending</option>
-              <option value="WIN">WIN (profitable)</option>
-              <option value="LOSS">LOSS (unprofitable)</option>
-              <option value="NEUTRAL">NEUTRAL (break even)</option>
-            </select>
+            <label className="text-xs text-zinc-400">Notes (optional)</label>
+            <textarea rows={2} value={form.context_note} onChange={(e) => setForm(f => ({ ...f, context_note: e.target.value }))} placeholder="Reasoning, market conditions, conviction…" className={`${INPUT} resize-none`} />
           </div>
           <div className="flex gap-2 justify-end pt-1">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
