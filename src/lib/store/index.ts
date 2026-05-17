@@ -226,8 +226,8 @@ export const useDashboardStore = create<DashboardState>()(
         pricesLastFetched: null,
         signalCache:    {},
         stats:          null,
-        activeGroup:    'portfolio',
-        activeSubTab:   'overview',
+        activeGroup:    'action',
+        activeSubTab:   'action',
         activeTicker:   null,
         railwayUrl:     '',
         alerts:         [],
@@ -337,7 +337,7 @@ export const useDashboardStore = create<DashboardState>()(
         // ── UI ────────────────────────────────────────────────
         setActiveGroup: (group, subTab) => {
           const defaults: Record<string, string> = {
-            portfolio: 'overview', action: 'alerts',
+            action: 'action', portfolio: 'overview',
             pipeline: 'watchlist', learnings: 'signals',
             briefing: 'briefing', settings: 'settings',
           }
@@ -396,8 +396,8 @@ export const useDashboardStore = create<DashboardState>()(
             pricesLastFetched: null,
             signalCache:       {},
             stats:             null,
-            activeGroup:       'portfolio',
-            activeSubTab:      'overview',
+            activeGroup:       'action',
+            activeSubTab:      'action',
             activeTicker:      null,
             railwayUrl:        '',
             alerts:            [],

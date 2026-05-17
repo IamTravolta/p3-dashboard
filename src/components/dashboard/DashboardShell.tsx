@@ -68,13 +68,20 @@ interface DashboardShellProps {
 
 const NAV_GROUPS = [
   {
+    id: 'action',
+    label: 'Intelligence',
+    icon: '◉',
+    subTabs: [
+      { id: 'action', label: 'When to Act' },
+    ],
+  },
+  {
     id: 'portfolio',
     label: 'Portfolio',
     icon: '◇',
     subTabs: [
       { id: 'overview',   label: 'Overview' },
       { id: 'positions',  label: 'Positions' },
-      { id: 'action',     label: 'Action Center' },
       { id: 'sizing',     label: 'Sizing' },
       { id: 'catalysts',  label: 'Catalysts' },
       { id: 'hedge',      label: 'Hedge' },
