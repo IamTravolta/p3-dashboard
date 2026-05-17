@@ -13,7 +13,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 })
 
 export async function proxy(request: NextRequest) {
-  const event = { waitUntil: () => {}, passThroughOnException: () => {} } as NextFetchEvent
+  const event = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as NextFetchEvent
   return clerkHandler(request, event)
 }
 
