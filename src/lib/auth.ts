@@ -33,10 +33,21 @@ export async function getSupabaseUserId(): Promise<string | null> {
   const supabaseUser = data.users.find(
     (u) => u.email?.toLowerCase() === email.toLowerCase(),
   )
-  if (!supabaseUser) return null
 
-  _cache.set(clerkUserId, supabaseUser.id)
-  return supabaseUser.id
+  if (supabaseUser) {
+    _cache.set(clerkUserId, supabaseUser.id)
+    return supabaseUser.id
+  }
+
+  // No Supabase user — create one so the Clerk user can access the app
+  const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  })
+  if (createErr || !created?.user) return null
+
+  _cache.set(clerkUserId, created.user.id)
+  return created.user.id
 }
 
 type AuthOk  = { userId: string; db: typeof supabaseAdmin }
