@@ -1,24 +1,30 @@
 /**
  * POST /api/auth/otp
  *
- * Smart OTP dispatcher:
- * - If the email is the user's primary Supabase auth email → send OTP directly.
- * - If the email is in user_linked_emails → look up the primary email for that
- *   account and send the OTP there instead (Supabase can only verify against the
- *   primary auth email).
- * - Returns { sentTo: string } so the client can show "code sent to X".
+ * Sends a login code to the provided email — works for any registered email:
  *
- * Uses the service-role key to query linked emails without a session.
+ * • Primary email  → Supabase signInWithOtp (Supabase handles sending)
+ * • Linked email   → custom 6-digit code generated here, sent via Resend
+ *                    to the exact email the user typed, so they get it there.
+ *
+ * Returns:
+ *   { flow: 'supabase', sentTo: string }   — primary email path
+ *   { flow: 'custom',   sentTo: string }   — linked email path
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient }                        from '@supabase/supabase-js'
+import { sendEmail, otpEmailHtml }             from '@/lib/utils/resend'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } },
 )
+
+function generateCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000))
+}
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
@@ -36,30 +42,64 @@ export async function POST(req: NextRequest) {
     .eq('email', normalised)
     .maybeSingle()
 
-  let targetEmail = normalised
-
-  if (linkedRow?.user_id) {
-    // Resolve the primary email for this user via the admin API
-    const { data: { user: adminUser }, error: adminErr } =
-      await supabaseAdmin.auth.admin.getUserById(linkedRow.user_id)
-
-    if (adminErr || !adminUser?.email) {
-      return NextResponse.json({ error: 'Could not resolve account for that email' }, { status: 400 })
-    }
-
-    targetEmail = adminUser.email
+  // ── Primary email path ────────────────────────────────────────────────────
+  if (!linkedRow) {
+    const supabase = await createServerClient()
+    const { error } = await supabase.auth.signInWithOtp({
+      email:   normalised,
+      options: { shouldCreateUser: false },
+    })
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ flow: 'supabase', sentTo: normalised })
   }
 
-  // ── Send OTP to the target (primary) email ────────────────────────────────
-  // We use the server client here (anon key) with shouldCreateUser: false
-  // so only existing accounts receive codes.
-  const supabase = await createServerClient()
-  const { error } = await supabase.auth.signInWithOtp({
-    email:   targetEmail,
-    options: { shouldCreateUser: false },
+  // ── Linked email path — send custom OTP via Resend ────────────────────────
+  const primaryUserId = linkedRow.user_id
+
+  // Resolve the primary email (needed later for session generation after verify)
+  const { data: { user: primaryUser }, error: adminErr } =
+    await supabaseAdmin.auth.admin.getUserById(primaryUserId)
+
+  if (adminErr || !primaryUser?.email) {
+    return NextResponse.json({ error: 'Could not resolve account' }, { status: 400 })
+  }
+
+  const code      = generateCode()
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+
+  // Store the challenge (invalidate previous unused ones for this email first)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabaseAdmin as any)
+    .from('otp_challenges')
+    .delete()
+    .eq('email', normalised)
+    .is('used_at', null)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: insertErr } = await (supabaseAdmin as any)
+    .from('otp_challenges')
+    .insert({
+      email:           normalised,
+      primary_user_id: primaryUserId,
+      code,
+      expires_at:      expiresAt,
+    })
+
+  if (insertErr) {
+    console.error('[otp] insert error', insertErr)
+    return NextResponse.json({ error: 'Failed to create challenge' }, { status: 500 })
+  }
+
+  // Send via Resend
+  const { ok, error: sendErr } = await sendEmail({
+    to:      normalised,
+    subject: 'Your P3 login code',
+    html:    otpEmailHtml(code),
   })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (!ok) {
+    return NextResponse.json({ error: sendErr ?? 'Failed to send email' }, { status: 500 })
+  }
 
-  return NextResponse.json({ sentTo: targetEmail })
+  return NextResponse.json({ flow: 'custom', sentTo: normalised })
 }

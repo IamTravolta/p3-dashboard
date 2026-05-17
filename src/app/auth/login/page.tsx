@@ -4,15 +4,19 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+type Flow = 'supabase' | 'custom'
+
 export default function LoginPage() {
   const [email,   setEmail]   = useState('')
-  const [sentTo,  setSentTo]  = useState('')   // may differ from entered email if linked
+  const [sentTo,  setSentTo]  = useState('')
+  const [flow,    setFlow]    = useState<Flow>('supabase')
   const [token,   setToken]   = useState('')
   const [step,    setStep]    = useState<'email' | 'token'>('email')
   const [error,   setError]   = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
+  // ── Step 1 — request code ─────────────────────────────────────────────────
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -24,33 +28,47 @@ export default function LoginPage() {
       body:    JSON.stringify({ email }),
     })
     const json = await res.json()
-
     setLoading(false)
 
-    if (!res.ok) {
-      setError(json.error ?? 'Failed to send code')
-      return
-    }
+    if (!res.ok) { setError(json.error ?? 'Failed to send code'); return }
 
-    setSentTo(json.sentTo)   // could be different from entered email
+    setSentTo(json.sentTo)
+    setFlow(json.flow)
     setStep('token')
   }
 
+  // ── Step 2 — verify code ──────────────────────────────────────────────────
   async function handleTokenSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.verifyOtp({
-      email: sentTo,   // always verify against the primary email the OTP was sent to
-      token,
-      type: 'email',
-    })
+    if (flow === 'supabase') {
+      // Primary email — Supabase verifies directly
+      const supabase = createClient()
+      const { error } = await supabase.auth.verifyOtp({
+        email: sentTo,
+        token,
+        type:  'email',
+      })
+      setLoading(false)
+      if (error) setError(error.message)
+      else router.push('/')
+    } else {
+      // Linked email — custom verify, returns a magic link redirect
+      const res  = await fetch('/api/auth/verify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: sentTo, code: token }),
+      })
+      const json = await res.json()
+      setLoading(false)
 
-    setLoading(false)
-    if (error) setError(error.message)
-    else router.push('/')
+      if (!res.ok) { setError(json.error ?? 'Invalid code'); return }
+
+      // Redirect to the generated magic link — completes the Supabase session
+      window.location.href = json.redirectTo
+    }
   }
 
   return (
@@ -97,15 +115,8 @@ export default function LoginPage() {
           ) : (
             <form onSubmit={handleTokenSubmit} className="space-y-4">
               <div className="text-center pb-1 space-y-1">
-                <p className="text-sm text-zinc-400">
-                  Enter the code sent to
-                </p>
-                <p className="text-sm font-medium text-white">{sentTo}</p>
-                {sentTo !== email.toLowerCase().trim() && (
-                  <p className="text-xs text-zinc-500">
-                    (your linked email routes to this address)
-                  </p>
-                )}
+                <p className="text-sm text-zinc-400">Enter the code sent to</p>
+                <p className="text-sm font-medium text-white break-all">{sentTo}</p>
               </div>
 
               <div>
@@ -121,7 +132,7 @@ export default function LoginPage() {
                   value={token}
                   onChange={(e) => setToken(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
-                  maxLength={8}
+                  maxLength={6}
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition tracking-widest text-center font-mono"
                 />
               </div>
