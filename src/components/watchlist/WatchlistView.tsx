@@ -375,13 +375,41 @@ interface SignalResult {
   ticker?:      string
   signals?:     SignalModule[]
   verdict?: {
-    verdict?:      string
-    finalVerdict?: string
-    confidence:    number
-    score?:        number
-    reasoning?:    string
+    verdict?:        string
+    finalVerdict?:   string
+    final_verdict?:  string
+    confidence:      number
+    score?:          number
+    reasoning?:      string
+    earningsWarning?: boolean
+    macroRegime?:    string
   }
   speculation?: { score: number; label: string }
+  fundamentals?: {
+    earningsDate?:     string | null
+    daysToEarnings?:   number | null
+    earningsTime?:     string | null
+    surpriseHistory?:  Array<{ date: string; beat: boolean; epsMiss: number }>
+    peRatio?:          number | null
+    evToEbitda?:       number | null
+    revenueGrowthYoY?: number | null
+    netMargin?:        number | null
+    analystConsensus?: string | null
+    analystTarget?:    number | null
+    estimateRevisions?: string | null
+  }
+  macro?: {
+    regime?:        string
+    regimeSummary?: string
+    vix?:           number | null
+    yieldSpread?:   number | null
+    creditSpread?:  number | null
+  }
+  insider?: {
+    netBuySignal?: string
+    summary?:      string
+    transactions?: Array<{ filedAt: string; insiderName: string; insiderTitle: string; transactionType: string; shares: number; totalValue: number | null }>
+  }
   price?:       number
   error?:       string
 }
@@ -446,7 +474,10 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
 
   const signalList   = Array.isArray(result.signals) ? result.signals : []
   const verdict      = result.verdict
-  const verdictLabel = verdict?.verdict ?? verdict?.finalVerdict ?? 'HOLD'
+  const verdictLabel = verdict?.final_verdict ?? verdict?.verdict ?? verdict?.finalVerdict ?? 'HOLD'
+  const f            = result.fundamentals
+  const m            = result.macro
+  const ins          = result.insider
 
   const verdictColor = verdictLabel === 'BUY'
     ? 'text-emerald-400 bg-emerald-900/30 border-emerald-800'
@@ -454,10 +485,29 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
     ? 'text-red-400 bg-red-900/30 border-red-800'
     : 'text-yellow-400 bg-yellow-900/30 border-yellow-800'
 
+  const macroColor: Record<string, string> = {
+    'risk-on':  'text-emerald-400 bg-emerald-900/20 border-emerald-800/50',
+    'cautious': 'text-yellow-400 bg-yellow-900/20 border-yellow-800/50',
+    'risk-off': 'text-orange-400 bg-orange-900/20 border-orange-800/50',
+    'crisis':   'text-red-400 bg-red-900/20 border-red-800/50',
+  }
+  const regimeClass = macroColor[m?.regime ?? ''] ?? 'text-zinc-400 bg-zinc-800/50 border-zinc-700'
+
+  const insiderColor: Record<string, string> = {
+    'strong-buy': 'text-emerald-400 bg-emerald-900/20 border-emerald-800/50',
+    'buy':        'text-emerald-400 bg-emerald-900/20 border-emerald-800/50',
+    'neutral':    'text-zinc-400 bg-zinc-800/50 border-zinc-700',
+    'sell':       'text-red-400 bg-red-900/20 border-red-800/50',
+    'unknown':    'text-zinc-500 bg-zinc-800/30 border-zinc-800',
+  }
+  const insiderClass = insiderColor[ins?.netBuySignal ?? 'unknown'] ?? insiderColor.unknown
+
   return (
     <div className="space-y-3 border-t border-zinc-800 pt-3">
+
+      {/* ── Verdict row ── */}
       {verdict && (
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold ${verdictColor}`}>
             {verdictLabel}
             <span className="text-xs font-normal opacity-75">{(verdict.confidence * 100).toFixed(0)}% conf</span>
@@ -465,19 +515,133 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
               <span className="text-xs font-normal opacity-75">· {verdict.score.toFixed(1)}/10</span>
             )}
           </div>
+
+          {/* Macro regime badge */}
+          {m?.regime && (
+            <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold ${regimeClass}`}>
+              Macro: {m.regime}
+            </span>
+          )}
+
+          {/* Insider badge */}
+          {ins?.netBuySignal && ins.netBuySignal !== 'unknown' && (
+            <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold ${insiderClass}`}>
+              Insider: {ins.netBuySignal.replace('-', ' ')}
+            </span>
+          )}
+
+          {/* Earnings warning */}
+          {verdict.earningsWarning && (
+            <span className="inline-flex items-center rounded-md border border-amber-700/50 bg-amber-900/20 px-2 py-1 text-[10px] font-semibold text-amber-400">
+              ⚠ Earnings {f?.daysToEarnings != null ? `in ${f.daysToEarnings}d` : 'soon'}
+            </span>
+          )}
+
+          {/* Speculation score */}
           {result.speculation && (
-            <div className="inline-flex items-center gap-1 rounded-lg border border-amber-800/50 bg-amber-900/20 px-2.5 py-1 text-xs font-medium text-amber-300">
-              <span className="text-zinc-400 font-normal">Speculation:</span>
-              {' '}{result.speculation.score}/10
-              <span className="text-amber-400/70">·</span>
-              {result.speculation.label}
-            </div>
+            <span className="inline-flex items-center gap-1 rounded-md border border-amber-800/50 bg-amber-900/20 px-2 py-1 text-[10px] font-semibold text-amber-300">
+              Spec: {result.speculation.score}/10 · {result.speculation.label}
+            </span>
           )}
         </div>
       )}
+
+      {/* ── Reasoning ── */}
       {verdict?.reasoning && (
-        <p className="text-xs text-zinc-500 leading-relaxed line-clamp-3">{verdict.reasoning}</p>
+        <p className="text-xs text-zinc-400 leading-relaxed line-clamp-4">{verdict.reasoning}</p>
       )}
+
+      {/* ── Fundamentals strip ── */}
+      {f && (
+        <div className="flex flex-wrap gap-1.5">
+          {f.peRatio != null && (
+            <MetaPill label="P/E" value={`${f.peRatio.toFixed(1)}×`} />
+          )}
+          {f.evToEbitda != null && (
+            <MetaPill label="EV/EBITDA" value={`${f.evToEbitda.toFixed(1)}×`} />
+          )}
+          {f.revenueGrowthYoY != null && (
+            <MetaPill
+              label="Rev growth"
+              value={`${(f.revenueGrowthYoY * 100).toFixed(1)}%`}
+              highlight={f.revenueGrowthYoY > 0 ? 'green' : 'red'}
+            />
+          )}
+          {f.netMargin != null && (
+            <MetaPill label="Net margin" value={`${(f.netMargin * 100).toFixed(1)}%`} />
+          )}
+          {f.analystConsensus && (
+            <MetaPill label="Analyst" value={f.analystConsensus} />
+          )}
+          {f.analystTarget != null && (
+            <MetaPill label="Target" value={`$${f.analystTarget.toFixed(0)}`} highlight="green" />
+          )}
+          {f.estimateRevisions && (
+            <MetaPill
+              label="Estimates"
+              value={`↑ ${f.estimateRevisions}` .replace('↑ up', '↑ rising').replace('↑ down', '↓ falling').replace('↑ flat', '→ flat')}
+              highlight={f.estimateRevisions === 'up' ? 'green' : f.estimateRevisions === 'down' ? 'red' : undefined}
+            />
+          )}
+          {f.daysToEarnings != null && (
+            <MetaPill
+              label="Earnings"
+              value={`${f.daysToEarnings}d`}
+              highlight={f.daysToEarnings <= 7 ? 'red' : f.daysToEarnings <= 14 ? 'red' : undefined}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── Earnings surprise history ── */}
+      {f?.surpriseHistory && f.surpriseHistory.length > 0 && (
+        <div>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wide mb-1.5">Earnings history</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {f.surpriseHistory.map((s) => (
+              <div
+                key={s.date}
+                className={`rounded px-2 py-1 text-[10px] font-semibold border ${
+                  s.beat
+                    ? 'text-emerald-400 bg-emerald-900/20 border-emerald-800/50'
+                    : 'text-red-400 bg-red-900/20 border-red-800/50'
+                }`}
+              >
+                {s.date.slice(0, 7)} {s.beat ? '▲' : '▼'} {s.beat ? '+' : ''}{s.epsMiss.toFixed(2)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Macro detail ── */}
+      {m && (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 space-y-1">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Macro context</p>
+          <p className="text-xs text-zinc-400">{m.regimeSummary}</p>
+        </div>
+      )}
+
+      {/* ── Insider detail ── */}
+      {ins && ins.transactions && ins.transactions.length > 0 && (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 space-y-1.5">
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Insider activity (90 days)</p>
+          {ins.transactions.slice(0, 3).map((t, i) => (
+            <div key={i} className="flex items-center justify-between text-[10px]">
+              <span className={`font-semibold ${t.transactionType === 'buy' ? 'text-emerald-400' : t.transactionType === 'sell' ? 'text-red-400' : 'text-zinc-400'}`}>
+                {t.transactionType.toUpperCase()}
+              </span>
+              <span className="text-zinc-400 truncate mx-2 max-w-[120px]">{t.insiderName}</span>
+              <span className="text-zinc-500">{t.shares.toLocaleString()} shs</span>
+              {t.totalValue != null && (
+                <span className="text-zinc-500 ml-2">${(t.totalValue / 1000).toFixed(0)}k</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Signal modules ── */}
       {signalList.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {signalList.map((sig, i) => (

@@ -4,10 +4,11 @@
  * Body: { ticker, exchange, sector, name, reason?, watchlist_id? }
  *
  * 1. Runs technical, polymarket, sentiment signal modules in parallel
- * 2. Produces verdict via Claude (or rule-based fallback)
- * 3. Saves signals + verdict to Supabase
- * 4. Optionally saves speculation score + volume snapshot
- * 5. Returns { signals, verdict, speculation }
+ * 2. Fetches fundamentals (FMP), macro regime (FRED), insider data (EDGAR) in parallel
+ * 3. Produces verdict via Claude — full context: signals + fundamentals + macro + insider
+ * 4. Saves signals + verdict to Supabase
+ * 5. Optionally saves speculation score + volume snapshot
+ * 6. Returns { signals, verdict, speculation, fundamentals, macro, insider }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -17,6 +18,9 @@ import { getPolymarketSignal }       from '@/lib/signals/polymarket'
 import { getSentimentSignal }        from '@/lib/signals/sentiment'
 import { getVerdict }                from '@/lib/signals/verdict'
 import { getSpeculationScore }       from '@/lib/signals/speculation'
+import { getFundamentalsBundle }     from '@/lib/utils/fmp'
+import { getMacroSnapshot }          from '@/lib/utils/fred'
+import { getInsiderTransactions }    from '@/lib/utils/edgar'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,15 +43,18 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // ── Run all signal modules in parallel ────────────────────────────────────
-    const [tech, poly, sent] = await Promise.all([
+    // ── Run all signal modules + external data in parallel ────────────────────
+    const [tech, poly, sent, fundamentals, macro, insider] = await Promise.all([
       getTechnicalSignal(ticker, exchange),
       getPolymarketSignal(sector),
       getSentimentSignal(ticker, sector, name, body.reason),
+      getFundamentalsBundle(ticker),
+      getMacroSnapshot(),
+      getInsiderTransactions(ticker),
     ])
 
-    // ── Verdict ───────────────────────────────────────────────────────────────
-    const verdict = await getVerdict(ticker, name, sector, tech, poly, sent)
+    // ── Verdict — now with full context ───────────────────────────────────────
+    const verdict = await getVerdict(ticker, name, sector, tech, poly, sent, fundamentals, macro, insider)
 
     // ── Speculation score ─────────────────────────────────────────────────────
     const spec = await getSpeculationScore(
@@ -196,9 +203,12 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      signals:     savedSignals ?? signalRows,
-      verdict:     savedVerdict ?? { final_verdict: verdict.verdict, confidence: verdict.confidence, ticker, logged_at: now },
-      speculation: spec,
+      signals:      savedSignals ?? signalRows,
+      verdict:      savedVerdict ?? { final_verdict: verdict.verdict, confidence: verdict.confidence, ticker, logged_at: now },
+      speculation:  spec,
+      fundamentals,
+      macro,
+      insider,
     })
   } catch (err) {
     console.error('Analyze error:', err)
