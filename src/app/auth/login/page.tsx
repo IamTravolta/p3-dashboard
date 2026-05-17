@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
-  const [email, setEmail]     = useState('')
-  const [token, setToken]     = useState('')
-  const [step, setStep]       = useState<'email' | 'token'>('email')
-  const [error, setError]     = useState<string | null>(null)
+  const [email,   setEmail]   = useState('')
+  const [sentTo,  setSentTo]  = useState('')   // may differ from entered email if linked
+  const [token,   setToken]   = useState('')
+  const [step,    setStep]    = useState<'email' | 'token'>('email')
+  const [error,   setError]   = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -17,15 +18,22 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
+    const res  = await fetch('/api/auth/otp', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email }),
     })
+    const json = await res.json()
 
     setLoading(false)
-    if (error) setError(error.message)
-    else setStep('token')
+
+    if (!res.ok) {
+      setError(json.error ?? 'Failed to send code')
+      return
+    }
+
+    setSentTo(json.sentTo)   // could be different from entered email
+    setStep('token')
   }
 
   async function handleTokenSubmit(e: React.FormEvent) {
@@ -35,7 +43,7 @@ export default function LoginPage() {
 
     const supabase = createClient()
     const { error } = await supabase.auth.verifyOtp({
-      email,
+      email: sentTo,   // always verify against the primary email the OTP was sent to
       token,
       type: 'email',
     })
@@ -50,7 +58,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-white tracking-tight">P3 Dashboard</h1>
-          <p className="mt-1 text-sm text-zinc-400">Personal Portfolio & Prediction Platform</p>
+          <p className="mt-1 text-sm text-zinc-400">Personal Portfolio &amp; Prediction Platform</p>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
@@ -88,10 +96,16 @@ export default function LoginPage() {
             </form>
           ) : (
             <form onSubmit={handleTokenSubmit} className="space-y-4">
-              <div className="text-center pb-1">
+              <div className="text-center pb-1 space-y-1">
                 <p className="text-sm text-zinc-400">
-                  Enter the code sent to <span className="text-white font-medium">{email}</span>
+                  Enter the code sent to
                 </p>
+                <p className="text-sm font-medium text-white">{sentTo}</p>
+                {sentTo !== email.toLowerCase().trim() && (
+                  <p className="text-xs text-zinc-500">
+                    (your linked email routes to this address)
+                  </p>
+                )}
               </div>
 
               <div>
@@ -120,7 +134,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading || token.length < 8}
+                disabled={loading || token.length < 6}
                 className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 {loading ? 'Verifying…' : 'Sign in'}
@@ -128,7 +142,7 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => { setStep('email'); setToken(''); setError(null) }}
+                onClick={() => { setStep('email'); setToken(''); setSentTo(''); setError(null) }}
                 className="w-full text-xs text-zinc-500 hover:text-zinc-300 underline"
               >
                 Use a different email

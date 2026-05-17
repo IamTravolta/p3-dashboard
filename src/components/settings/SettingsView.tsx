@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Save, RefreshCw, Download, Upload, Link } from 'lucide-react'
+import { Save, RefreshCw, Download, Upload, Link, Plus, Trash2, Mail } from 'lucide-react'
 import { useDashboardStore } from '@/lib/store'
 
 interface UserSettings {
@@ -185,6 +185,9 @@ export default function SettingsView() {
           )}
         </Field>
       </Section>
+
+      {/* Login Emails */}
+      <LinkedEmailsSection />
 
       {/* Currency */}
       <Section title="Display">
@@ -418,6 +421,157 @@ function GenerateBriefingButton() {
         <p className="text-xs text-red-400">{errMsg ?? 'Generation failed'}</p>
       )}
     </div>
+  )
+}
+
+// ── LinkedEmailsSection ───────────────────────────────────────────────────────
+
+interface LinkedEmail {
+  id: string
+  email: string
+  label: string | null
+  created_at: string
+}
+
+function LinkedEmailsSection() {
+  const [primary, setPrimary] = useState<string | null>(null)
+  const [linked,  setLinked]  = useState<LinkedEmail[]>([])
+  const [loading, setLoading] = useState(true)
+  const [adding,  setAdding]  = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [newLabel, setNewLabel] = useState('')
+  const [saving,  setSaving]  = useState(false)
+  const [err,     setErr]     = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/settings/emails')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.primary) setPrimary(j.primary)
+        if (j.linked)  setLinked(j.linked)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    setErr(null)
+    setSaving(true)
+    const res  = await fetch('/api/settings/emails', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: newEmail, label: newLabel }),
+    })
+    const json = await res.json()
+    setSaving(false)
+    if (!res.ok) { setErr(json.error ?? 'Failed to add email'); return }
+    setLinked((prev) => [...prev, json.linked])
+    setNewEmail('')
+    setNewLabel('')
+    setAdding(false)
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id)
+    await fetch(`/api/settings/emails/${id}`, { method: 'DELETE' })
+    setLinked((prev) => prev.filter((e) => e.id !== id))
+    setDeletingId(null)
+  }
+
+  return (
+    <Section title="Login emails">
+      <p className="text-xs text-zinc-500 -mt-2">
+        Add extra email addresses you can use to log in. When you enter a linked email
+        at the login screen, the one-time code is sent to your primary email.
+      </p>
+
+      {loading ? (
+        <p className="text-xs text-zinc-600">Loading…</p>
+      ) : (
+        <div className="space-y-2">
+          {/* Primary email */}
+          <div className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2.5">
+            <Mail size={13} className="text-indigo-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-white truncate">{primary}</p>
+              <p className="text-[10px] text-zinc-500">Primary — OTP codes always go here</p>
+            </div>
+            <span className="shrink-0 rounded-full bg-indigo-600/20 border border-indigo-600/40 px-2 py-0.5 text-[10px] font-semibold text-indigo-400">
+              PRIMARY
+            </span>
+          </div>
+
+          {/* Linked emails */}
+          {linked.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
+              <Mail size={13} className="text-zinc-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-zinc-200 truncate">{item.email}</p>
+                {item.label && <p className="text-[10px] text-zinc-500">{item.label}</p>}
+              </div>
+              <button
+                onClick={() => handleDelete(item.id)}
+                disabled={deletingId === item.id}
+                className="shrink-0 rounded p-1 text-zinc-600 hover:text-red-400 hover:bg-red-900/20 disabled:opacity-40 transition"
+                title="Remove"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+
+          {/* Add form */}
+          {adding ? (
+            <form onSubmit={handleAdd} className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 space-y-3">
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  placeholder="new@example.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                />
+                <input
+                  type="text"
+                  placeholder="Label (optional — e.g. Work, Personal)"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                />
+              </div>
+              {err && <p className="text-xs text-red-400">{err}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={saving || !newEmail}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition"
+                >
+                  {saving ? <RefreshCw size={11} className="animate-spin" /> : <Plus size={11} />}
+                  {saving ? 'Adding…' : 'Add email'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setNewEmail(''); setNewLabel(''); setErr(null) }}
+                  className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              onClick={() => setAdding(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-700 border-dashed bg-transparent px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition w-full"
+            >
+              <Plus size={12} /> Add login email
+            </button>
+          )}
+        </div>
+      )}
+    </Section>
   )
 }
 
