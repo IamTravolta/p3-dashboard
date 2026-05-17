@@ -1,6 +1,6 @@
 'use client'
 
-import { useClerk }          from '@clerk/nextjs'
+import { createClient }      from '@/lib/supabase/client'
 import { useEffect, useRef, useState } from 'react'
 import { useDashboardStore } from '@/lib/store'
 
@@ -145,7 +145,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const alerts            = useDashboardStore((s) => s.alerts)
   const markAlertRead     = useDashboardStore((s) => s.markAlertRead)
   const reset             = useDashboardStore((s) => s.reset)
-  const { signOut } = useClerk()
+  const supabase = createClient()
   const [bellOpen, setBellOpen] = useState(false)
   const bellRef = useRef<HTMLDivElement>(null)
 
@@ -181,7 +181,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
 
   async function handleSignOut() {
     reset()
-    await signOut({ redirectUrl: '/auth/login' })
+    await supabase.auth.signOut()
+    window.location.href = '/auth/login'
   }
 
   const currentGroup = NAV_GROUPS.find((g) => g.id === activeGroup)
