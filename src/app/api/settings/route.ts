@@ -1,25 +1,23 @@
 /**
- * GET  /api/settings  — fetch user settings (from user_metadata or settings table)
+ * GET  /api/settings  — fetch user settings
  * POST /api/settings  — upsert user settings
  *
- * We store settings in Supabase user_metadata for simplicity.
- * Falls back to a sensible default if not yet set.
+ * Settings are stored in Supabase user_metadata, accessed via the admin API.
  */
-
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient }              from '@/lib/supabase/server'
+import { NextRequest, NextResponse }    from 'next/server'
+import { requireUser, supabaseAdmin }   from '@/lib/auth'
 
 export interface UserSettings {
-  currency:         string   // 'EUR' | 'USD' | 'GBP'
+  currency:         string
   factor_weights: {
-    q: number   // Quality    0-1, sum should be 1
-    g: number   // Growth
-    v: number   // Valuation
-    m: number   // Momentum
-    s: number   // Sentiment
+    q: number
+    g: number
+    v: number
+    m: number
+    s: number
   }
-  max_position_pct: number   // e.g. 0.15 = 15% per position
-  briefing_hour:    number   // 0-23, local hour to gen daily briefing
+  max_position_pct: number
+  briefing_hour:    number
   theme:            'dark' | 'light'
 }
 
@@ -32,25 +30,31 @@ const DEFAULT_SETTINGS: UserSettings = {
 }
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId } = _auth
 
-  const stored = (user.user_metadata?.settings ?? {}) as Partial<UserSettings>
-  const settings = { ...DEFAULT_SETTINGS, ...stored, factor_weights: { ...DEFAULT_SETTINGS.factor_weights, ...(stored.factor_weights ?? {}) } }
+  const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
+  const stored = (user?.user_metadata?.settings ?? {}) as Partial<UserSettings>
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    factor_weights: { ...DEFAULT_SETTINGS.factor_weights, ...(stored.factor_weights ?? {}) },
+  }
 
   return NextResponse.json({ settings })
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId } = _auth
 
   const body = await req.json() as Partial<UserSettings>
 
-  // Merge with existing
-  const existing = (user.user_metadata?.settings ?? {}) as Partial<UserSettings>
+  const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
+  const existing = (user?.user_metadata?.settings ?? {}) as Partial<UserSettings>
+
   const merged: UserSettings = {
     ...DEFAULT_SETTINGS,
     ...existing,
@@ -62,8 +66,8 @@ export async function POST(req: NextRequest) {
     },
   }
 
-  const { error } = await supabase.auth.updateUser({
-    data: { settings: merged }
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    user_metadata: { settings: merged },
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

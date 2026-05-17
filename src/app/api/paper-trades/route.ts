@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient }              from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('paper_trades')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('entry_date', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -18,9 +18,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const body = await req.json()
   const { ticker, name, exchange, sector, entry_price, quantity, direction, reason, entry_date } = body
@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('paper_trades')
     .insert({
-      user_id:     user.id,
+      user_id:     userId,
       ticker:      ticker.toUpperCase().trim(),
       name:        name ?? ticker,
       exchange:    exchange ?? 'NYSE',

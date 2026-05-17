@@ -9,19 +9,15 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { fetchStooqPrices } from '@/lib/utils/stooq'
 
 // Cache duration in seconds — Stooq updates every ~15 min during market hours
 const CACHE_TTL = 60   // 1 minute
 
 export async function GET(request: NextRequest) {
-  // Auth guard
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
 
   const { searchParams } = new URL(request.url)
   const tickerParam = searchParams.get('tickers')

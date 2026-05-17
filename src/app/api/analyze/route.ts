@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient }              from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { getTechnicalSignal }        from '@/lib/signals/technical'
 import { getPolymarketSignal }       from '@/lib/signals/polymarket'
 import { getSentimentSignal }        from '@/lib/signals/sentiment'
@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: ticker, exchange, sector, name' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     // ── Run all signal modules + external data in parallel ────────────────────
     const [tech, poly, sent, fundamentals, macro, insider] = await Promise.all([
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     const signalRows = [
       {
-        user_id:    user.id,
+        user_id:    userId,
         ticker,
         module_name: 'technical',
         value:       tech.value,
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         raw_data:    tech.raw_data as unknown as Record<string, unknown>,
       },
       {
-        user_id:    user.id,
+        user_id:    userId,
         ticker,
         module_name: 'polymarket',
         value:       poly.value,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         raw_data:    poly.raw_data as unknown as Record<string, unknown>,
       },
       {
-        user_id:    user.id,
+        user_id:    userId,
         ticker,
         module_name: 'sentiment',
         value:       sent.value,
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     ]
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: savedSignals, error: signalErr } = await (supabase as any)
+    const { data: savedSignals, error: signalErr } = await (db as any)
       .from('signals')
       .insert(signalRows)
       .select()
@@ -119,10 +119,10 @@ export async function POST(req: NextRequest) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: savedVerdict, error: verdictErr } = await (supabase as any)
+    const { data: savedVerdict, error: verdictErr } = await (db as any)
       .from('verdicts')
       .insert({
-        user_id:          user.id,
+        user_id:          userId,
         ticker,
         final_verdict:    verdict.verdict,
         confidence:       verdict.confidence,
@@ -137,10 +137,10 @@ export async function POST(req: NextRequest) {
 
     // ── Persist speculation score ─────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await (db as any)
       .from('speculation_scores')
       .insert({
-        user_id:          user.id,
+        user_id:          userId,
         ticker,
         speculation_score: spec.score,
         beta:             spec.factors.beta_proxy,   // 0–10 proxy
@@ -157,10 +157,10 @@ export async function POST(req: NextRequest) {
         tech.raw_data.rsi14 < 48 ? 'down' : 'flat'
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      await (db as any)
         .from('volume_snapshots')
         .insert({
-          user_id:         user.id,
+          user_id:         userId,
           ticker,
           volume:          (tech.raw_data as Record<string, unknown>).volume as number ?? 0,
           relative_volume: tech.raw_data.relVolume,
@@ -172,25 +172,25 @@ export async function POST(req: NextRequest) {
     // ── Update signal_reliability counters ───────────────────────────────────
     for (const mod of ['technical', 'polymarket', 'sentiment'] as const) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await (db as any)
         .from('signal_reliability')
         .select('id, total')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('module_signal_key', mod)
         .single()
 
       if (existing) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        await (db as any)
           .from('signal_reliability')
           .update({ total: (existing.total ?? 0) + 1, last_updated: now })
           .eq('id', existing.id)
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        await (db as any)
           .from('signal_reliability')
           .insert({
-            user_id:           user.id,
+            user_id:           userId,
             module_signal_key: mod,
             total:             1,
             correct_30d:       0,

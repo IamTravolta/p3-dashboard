@@ -11,16 +11,16 @@
  */
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { fetchStooqPrices } from '@/lib/utils/stooq'
 
 const WINDOWS = [30, 60, 90] as const
 
 export async function POST() {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     const now = Date.now()
     let evaluated = 0
@@ -30,10 +30,10 @@ export async function POST() {
 
       // Find verdicts that are old enough for this window
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: verdicts } = await (supabase as any)
+      const { data: verdicts } = await (db as any)
         .from('verdicts')
         .select('id, ticker, final_verdict, initial_price, logged_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .lte('logged_at', cutoff)
         .gt('initial_price', 0)
         .limit(20)
@@ -43,7 +43,7 @@ export async function POST() {
       // Skip verdicts already evaluated at this window
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const verdictIds = (verdicts as { id: string }[]).map((v) => v.id)
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await (db as any)
         .from('verdict_outcomes')
         .select('verdict_id')
         .in('verdict_id', verdictIds)
@@ -87,7 +87,7 @@ export async function POST() {
 
         // Insert verdict_outcomes row
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        await (db as any)
           .from('verdict_outcomes')
           .insert({
             verdict_id:       v.id,
@@ -103,10 +103,10 @@ export async function POST() {
 
         for (const mod of ['technical', 'polymarket', 'sentiment'] as const) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: rel } = await (supabase as any)
+          const { data: rel } = await (db as any)
             .from('signal_reliability')
             .select(`id, ${correctCol}, wrong_30d, total`)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('module_signal_key', mod)
             .single()
 
@@ -131,7 +131,7 @@ export async function POST() {
           }
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
+          await (db as any)
             .from('signal_reliability')
             .update(updates)
             .eq('id', rel.id)

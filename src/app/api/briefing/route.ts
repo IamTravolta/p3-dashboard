@@ -9,7 +9,7 @@
  */
 
 import { NextResponse }   from 'next/server'
-import { createClient }   from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import Anthropic          from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -21,18 +21,18 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const forceRefresh = searchParams.get('refresh') === '1'
 
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     // Check cache (skip on ?refresh=1)
     if (!forceRefresh) {
       const cutoff = new Date(Date.now() - CACHE_HOURS * 3600 * 1000).toISOString()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: cached } = await (supabase as any)
+      const { data: cached } = await (db as any)
         .from('briefings')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('created_at', cutoff)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -43,25 +43,25 @@ export async function GET(req: Request) {
 
     // ── Gather portfolio context ──────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: positions } = await (supabase as any)
+    const { data: positions } = await (db as any)
       .from('positions')
       .select('ticker, name, sector, current_price, avg_cost, quantity, score')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .limit(20)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: watchlist } = await (supabase as any)
+    const { data: watchlist } = await (db as any)
       .from('watchlist')
       .select('ticker, name, sector, score, conviction')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .limit(10)
 
     // Recent verdicts
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: recentVerdicts } = await (supabase as any)
+    const { data: recentVerdicts } = await (db as any)
       .from('verdicts')
       .select('ticker, final_verdict, confidence, modules_snapshot, logged_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('logged_at', { ascending: false })
       .limit(10)
 
@@ -127,10 +127,10 @@ Be direct, analytical, and professional. No filler.`
 
     // ── Save to DB ────────────────────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: saved } = await (supabase as any)
+    const { data: saved } = await (db as any)
       .from('briefings')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         content,
       })
       .select()

@@ -11,13 +11,13 @@
  */
 
 import { NextRequest, NextResponse }   from 'next/server'
-import { createClient }                from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { getInsiderTransactions }      from '@/lib/utils/edgar'
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const ticker = new URL(req.url).searchParams.get('ticker')
   if (!ticker) return NextResponse.json({ error: 'ticker required' }, { status: 400 })

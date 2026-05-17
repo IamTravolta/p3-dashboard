@@ -2,34 +2,36 @@
  * GET  /api/settings/emails  — list linked emails for current user
  * POST /api/settings/emails  — add a new linked email
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient }              from '@/lib/supabase/server'
+import { NextRequest, NextResponse }    from 'next/server'
+import { requireUser, supabaseAdmin }   from '@/lib/auth'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
+
+  // Resolve primary email from Supabase auth user
+  const { data: { user: supaUser } } = await supabaseAdmin.auth.admin.getUserById(userId)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('user_linked_emails')
     .select('id, email, label, created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Return primary email (from Supabase auth) alongside linked ones
   return NextResponse.json({
-    primary: user.email,
+    primary: supaUser?.email ?? null,
     linked:  data ?? [],
   })
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const { email, label } = await req.json()
 
@@ -39,14 +41,16 @@ export async function POST(req: NextRequest) {
 
   const normalised = email.toLowerCase().trim()
 
-  if (normalised === user.email?.toLowerCase()) {
+  // Prevent adding the primary email as a linked email
+  const { data: { user: supaUser } } = await supabaseAdmin.auth.admin.getUserById(userId)
+  if (normalised === supaUser?.email?.toLowerCase()) {
     return NextResponse.json({ error: 'That is already your primary login email' }, { status: 400 })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('user_linked_emails')
-    .insert({ user_id: user.id, email: normalised, label: label?.trim() || null })
+    .insert({ user_id: userId, email: normalised, label: label?.trim() || null })
     .select('id, email, label, created_at')
     .single()
 

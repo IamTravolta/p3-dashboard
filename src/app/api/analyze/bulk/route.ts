@@ -10,7 +10,7 @@
  */
 
 import { NextResponse }           from 'next/server'
-import { createClient }           from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { getTechnicalSignal }     from '@/lib/signals/technical'
 import { getPolymarketSignal }    from '@/lib/signals/polymarket'
 import { getSentimentSignal }     from '@/lib/signals/sentiment'
@@ -37,7 +37,7 @@ async function analyseItem(
   item:    AnalysisItem,
   macro:   Awaited<ReturnType<typeof getMacroSnapshot>>,
   userId:  string,
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  db: typeof import('@/lib/auth').supabaseAdmin,
 ): Promise<{ ticker: string; success: boolean; verdict?: string; error?: string }> {
   try {
     const [tech, poly, sent, fundamentals, insider] = await Promise.all([
@@ -72,7 +72,7 @@ async function analyseItem(
 
     // Insert signal rows
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('signals').insert([
+    await (db as any).from('signals').insert([
       { user_id: userId, ticker: item.ticker, module_name: 'technical',  value: tech.value,  confidence: tech.confidence,  reasoning: tech.reasoning,  raw_data: tech.raw_data  as unknown as Record<string, unknown> },
       { user_id: userId, ticker: item.ticker, module_name: 'polymarket', value: poly.value,  confidence: poly.confidence,  reasoning: poly.reasoning,  raw_data: poly.raw_data  as unknown as Record<string, unknown> },
       { user_id: userId, ticker: item.ticker, module_name: 'sentiment',  value: sent.value,  confidence: sent.confidence,  reasoning: sent.reasoning,  raw_data: sent.raw_data  as unknown as Record<string, unknown> },
@@ -80,7 +80,7 @@ async function analyseItem(
 
     // Insert verdict
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('verdicts').insert({
+    await (db as any).from('verdicts').insert({
       user_id:          userId,
       ticker:           item.ticker,
       final_verdict:    verdict.verdict,
@@ -92,7 +92,7 @@ async function analyseItem(
 
     // Speculation score
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('speculation_scores').insert({
+    await (db as any).from('speculation_scores').insert({
       user_id:           userId,
       ticker:            item.ticker,
       speculation_score: spec.score,
@@ -109,7 +109,7 @@ async function analyseItem(
         tech.raw_data.rsi14 > 52 ? 'up' :
         tech.raw_data.rsi14 < 48 ? 'down' : 'flat'
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('volume_snapshots').insert({
+      await (db as any).from('volume_snapshots').insert({
         user_id:         userId,
         ticker:          item.ticker,
         volume:          (tech.raw_data as Record<string, unknown>).volume as number ?? 0,
@@ -139,22 +139,22 @@ async function runBatch<T>(
 
 export async function POST() {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     // Load positions + watchlist
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: positions } = await (supabase as any)
+    const { data: positions } = await (db as any)
       .from('positions')
       .select('id, ticker, exchange, sector, name')
-      .eq('user_id', user.id) as { data: Pick<PositionRow, 'id' | 'ticker' | 'exchange' | 'sector' | 'name'>[] | null }
+      .eq('user_id', userId) as { data: Pick<PositionRow, 'id' | 'ticker' | 'exchange' | 'sector' | 'name'>[] | null }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: watchlist } = await (supabase as any)
+    const { data: watchlist } = await (db as any)
       .from('watchlist')
       .select('id, ticker, exchange, sector, name')
-      .eq('user_id', user.id) as { data: Pick<WatchlistRow, 'id' | 'ticker' | 'exchange' | 'sector' | 'name'>[] | null }
+      .eq('user_id', userId) as { data: Pick<WatchlistRow, 'id' | 'ticker' | 'exchange' | 'sector' | 'name'>[] | null }
 
     const items: AnalysisItem[] = [
       ...(positions ?? []).map((p) => ({ ...p, type: 'position' as const })),
@@ -171,7 +171,7 @@ export async function POST() {
     const results: Array<{ ticker: string; success: boolean; verdict?: string; error?: string }> = []
 
     await runBatch(items, async (item) => {
-      const result = await analyseItem(item, macro, user.id, supabase)
+      const result = await analyseItem(item, macro, userId, db)
       results.push(result)
     }, 2)  // 2 at a time — FMP has rate limits on free tier
 

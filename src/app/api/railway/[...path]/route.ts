@@ -13,7 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 
 const RAILWAY_URL = process.env.RAILWAY_BACKEND_URL ?? ''
 
@@ -21,12 +21,8 @@ async function handler(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
-  // Auth guard
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
 
   if (!RAILWAY_URL) {
     return NextResponse.json(

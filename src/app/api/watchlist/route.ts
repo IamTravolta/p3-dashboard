@@ -1,19 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import type { Database } from '@/lib/types/database'
 
 type WatchlistInsert = Database['public']['Tables']['watchlist']['Insert']
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('watchlist')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('added_at', { ascending: false }) as {
       data: Database['public']['Tables']['watchlist']['Row'][] | null
       error: { message: string } | null
@@ -24,9 +24,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const body = await request.json() as Omit<WatchlistInsert, 'user_id'>
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
 
   const insertData: WatchlistInsert = {
-    user_id:       user.id,
+    user_id:       userId,
     ticker:        body.ticker.toUpperCase(),
     name:          body.name,
     exchange:      body.exchange      ?? 'NYSE',
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('watchlist')
     .insert(insertData)
     .select()

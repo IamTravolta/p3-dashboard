@@ -1,8 +1,7 @@
 'use client'
 
-import type { User } from '@supabase/supabase-js'
+import { useClerk }          from '@clerk/nextjs'
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useDashboardStore } from '@/lib/store'
 
 // ── Sync-age label ("Sync 2m ago" / "Syncing…") ──────────────────────────────
@@ -60,7 +59,7 @@ function AlertBell({ unread, onClick }: { unread: number; onClick: () => void })
 }
 
 interface DashboardShellProps {
-  user:     User
+  user:     { id: string; email: string }
   children: React.ReactNode
 }
 
@@ -146,8 +145,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const alerts            = useDashboardStore((s) => s.alerts)
   const markAlertRead     = useDashboardStore((s) => s.markAlertRead)
   const reset             = useDashboardStore((s) => s.reset)
-  const supabase          = createClient()
-
+  const { signOut } = useClerk()
   const [bellOpen, setBellOpen] = useState(false)
   const bellRef = useRef<HTMLDivElement>(null)
 
@@ -182,9 +180,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
     reset()
-    window.location.href = '/auth/login'
+    await signOut({ redirectUrl: '/auth/login' })
   }
 
   const currentGroup = NAV_GROUPS.find((g) => g.id === activeGroup)

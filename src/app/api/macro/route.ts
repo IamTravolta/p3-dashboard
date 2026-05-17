@@ -13,13 +13,13 @@
  */
 
 import { NextResponse }      from 'next/server'
-import { createClient }      from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { getMacroSnapshot }  from '@/lib/utils/fred'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const snapshot = await getMacroSnapshot()
   return NextResponse.json(snapshot)

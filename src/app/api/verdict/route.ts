@@ -6,25 +6,25 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const ticker = new URL(request.url).searchParams.get('ticker')
   if (!ticker) return NextResponse.json({ error: 'ticker required' }, { status: 400 })
 
   // Latest verdict with outcomes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: verdicts, error } = await (supabase as any)
+  const { data: verdicts, error } = await (db as any)
     .from('verdicts')
     .select(`
       *,
       verdict_outcomes (*)
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('ticker', ticker.toUpperCase())
     .order('logged_at', { ascending: false })
     .limit(10)

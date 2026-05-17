@@ -12,7 +12,6 @@ export default function TabContentRouter({ portfolioTab, watchlistTab }: TabCont
   const activeGroup  = useDashboardStore((s) => s.activeGroup)
   const activeSubTab = useDashboardStore((s) => s.activeSubTab)
 
-  // Portfolio overview and watchlist are server-rendered nodes passed as props
   if (activeGroup === 'portfolio' && activeSubTab === 'overview') return <>{portfolioTab}</>
   if (activeGroup === 'pipeline' && activeSubTab === 'watchlist') return <>{watchlistTab}</>
 

@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse }           from 'next/server'
-import { createClient }                        from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import { getFundamentalsBundle }               from '@/lib/utils/fmp'
 import { getMacroSnapshot }                    from '@/lib/utils/fred'
 import { getInsiderTransactions }              from '@/lib/utils/edgar'
@@ -53,9 +53,9 @@ function rowToPosition(r: PositionRow): Position {
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     // Optional live prices passed from client as JSON (avoids stale DB prices)
     const pricesParam = new URL(req.url).searchParams.get('prices')
@@ -64,8 +64,8 @@ export async function GET(req: NextRequest) {
     // ── Load positions + watchlist ─────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [{ data: wlRows }, { data: posRows }] = await Promise.all([
-      (supabase as any).from('watchlist').select('*').eq('user_id', user.id),
-      (supabase as any).from('positions').select('*').eq('user_id', user.id),
+      (db as any).from('watchlist').select('*').eq('user_id', userId),
+      (db as any).from('positions').select('*').eq('user_id', userId),
     ])
 
     const watchlist: WatchlistItem[] = (wlRows ?? []).map(rowToWatchlistItem)
@@ -85,10 +85,10 @@ export async function GET(req: NextRequest) {
 
     // ── Fetch latest verdict per ticker ───────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: verdictRows } = await (supabase as any)
+    const { data: verdictRows } = await (db as any)
       .from('verdicts')
       .select('ticker, final_verdict, confidence, modules_snapshot, logged_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .in('ticker', allTickers)
       .order('logged_at', { ascending: false })
 

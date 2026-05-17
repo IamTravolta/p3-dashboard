@@ -1,30 +1,24 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import DashboardShell from '@/components/dashboard/DashboardShell'
+import { currentUser }          from '@clerk/nextjs/server'
+import { redirect }             from 'next/navigation'
+import { getSupabaseUserId }    from '@/lib/auth'
+import DashboardShell           from '@/components/dashboard/DashboardShell'
 
 export const metadata = {
-  title: 'P3 Dashboard',
+  title:       'P3 Dashboard',
   description: 'Personal Portfolio & Prediction Platform',
 }
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  // Server-side auth guard
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const clerkUser = await currentUser()
+  if (!clerkUser) redirect('/auth/login')
 
-  if (!user) {
-    redirect('/auth/login')
+  const supabaseUserId = await getSupabaseUserId()
+  if (!supabaseUserId) redirect('/auth/login')
+
+  const user = {
+    id:    supabaseUserId,
+    email: clerkUser.emailAddresses?.[0]?.emailAddress ?? '',
   }
 
-  return (
-    <DashboardShell user={user}>
-      {children}
-    </DashboardShell>
-  )
+  return <DashboardShell user={user}>{children}</DashboardShell>
 }

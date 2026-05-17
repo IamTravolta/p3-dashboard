@@ -3,18 +3,18 @@
  * POST /api/settings/phones  — add a phone number
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient }              from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('user_phones')
     .select('id, phone, label, created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -22,9 +22,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const { phone, label } = await req.json()
   if (!phone || typeof phone !== 'string') {
@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
   const normalised = phone.trim().replace(/\s+/g, '')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('user_phones')
-    .insert({ user_id: user.id, phone: normalised, label: label?.trim() || null })
+    .insert({ user_id: userId, phone: normalised, label: label?.trim() || null })
     .select('id, phone, label, created_at')
     .single()
 

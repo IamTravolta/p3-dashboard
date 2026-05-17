@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/auth'
 import type { Database } from '@/lib/types/database'
 
 type PositionUpdate = Database['public']['Tables']['positions']['Update']
@@ -11,19 +11,19 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const { id } = await params
   const body    = await request.json() as PositionUpdate
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (db as any)
     .from('positions')
     .update(body)
     .eq('id', id)
-    .eq('user_id', user.id)   // RLS double-check
+    .eq('user_id', userId)   // RLS double-check
     .select()
     .single() as { data: PositionRow | null; error: { message: string } | null }
 
@@ -34,8 +34,8 @@ export async function PATCH(
   ;(async () => {
     try {
       const updatedPosition = data
-      await (supabase as any).from('conviction_snapshots').insert({
-        user_id:       user.id,
+      await (db as any).from('conviction_snapshots').insert({
+        user_id:       userId,
         ticker:        updatedPosition.ticker,
         score:         updatedPosition.conviction ?? null,
         factor_scores: updatedPosition.factor_scores ?? null,
@@ -55,18 +55,18 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const _auth = await requireUser()
+  if ('response' in _auth) return _auth.response
+  const { userId, db } = _auth
 
   const { id } = await params
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await (db as any)
     .from('positions')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id) as { error: { message: string } | null }
+    .eq('user_id', userId) as { error: { message: string } | null }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

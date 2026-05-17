@@ -1,33 +1,26 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireUser }                from '@/lib/auth'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { Database } from '@/lib/types/database'
+import type { Database }             from '@/lib/types/database'
 
 type BehavioralLogInsert = Database['public']['Tables']['behavioral_log']['Insert']
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     const body = await request.json() as Omit<BehavioralLogInsert, 'user_id'>
 
-    // Validate required fields
     if (!body.action_type || !body.user_action) {
       return NextResponse.json(
         { error: 'action_type and user_action are required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const insertData: BehavioralLogInsert = {
-      user_id:               user.id,
+      user_id:               userId,
       action_type:           body.action_type,
       ticker:                body.ticker ?? null,
       system_recommendation: body.system_recommendation ?? null,
@@ -36,11 +29,8 @@ export async function POST(request: NextRequest) {
       context:               body.context ?? null,
     }
 
-    // supabase-js v2.105 + TS 5.9: insert() conditional type doesn't resolve correctly
-    // for hand-written Database types. Cast is safe — insertData is fully typed above.
-    // TODO: remove when supabase-js fixes the RejectExcessProperties inference issue
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const q = supabase.from('behavioral_log') as any
+    const q = db.from('behavioral_log') as any
     const { data, error } = await q
       .insert(insertData)
       .select('id')
@@ -60,38 +50,28 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const _auth = await requireUser()
+    if ('response' in _auth) return _auth.response
+    const { userId, db } = _auth
 
     const { searchParams } = new URL(request.url)
     const limit  = Math.min(parseInt(searchParams.get('limit')  ?? '50'),  200)
     const offset = parseInt(searchParams.get('offset') ?? '0')
     const ticker = searchParams.get('ticker')
 
-    let query = supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (db as any)
       .from('behavioral_log')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (ticker) {
-      query = query.eq('ticker', ticker)
-    }
+    if (ticker) query = query.eq('ticker', ticker)
 
     const { data, error } = await query
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ data, count: data?.length ?? 0 })
   } catch (err) {
     console.error('[behavioral-log] GET error:', err)
