@@ -30,24 +30,30 @@ export async function getSupabaseUserId(): Promise<string | null> {
   const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 })
   if (error || !data) return null
 
+  // 1. Check primary Supabase account email
   const supabaseUser = data.users.find(
     (u) => u.email?.toLowerCase() === email.toLowerCase(),
   )
-
   if (supabaseUser) {
     _cache.set(clerkUserId, supabaseUser.id)
     return supabaseUser.id
   }
 
-  // No Supabase user — create one so the Clerk user can access the app
-  const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-  })
-  if (createErr || !created?.user) return null
+  // 2. Check registered linked emails — returns the owner's Supabase user ID
+  const { data: linked } = await supabaseAdmin
+    .from('user_linked_emails')
+    .select('user_id')
+    .eq('email', email.toLowerCase())
+    .limit(1)
+    .single()
 
-  _cache.set(clerkUserId, created.user.id)
-  return created.user.id
+  if (linked?.user_id) {
+    _cache.set(clerkUserId, linked.user_id)
+    return linked.user_id
+  }
+
+  // 3. Email not authorised — deny access
+  return null
 }
 
 type AuthOk  = { userId: string; db: typeof supabaseAdmin }
