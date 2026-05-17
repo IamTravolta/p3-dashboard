@@ -48,9 +48,11 @@ export default function TabContent() {
   const activeGroup  = useDashboardStore((s) => s.activeGroup)
   const activeSubTab = useDashboardStore((s) => s.activeSubTab)
 
+  // ── Intelligence ──────────────────────────────────────────
+  if (activeGroup === 'action') return <ActionCenterView />
+
   // ── Portfolio ─────────────────────────────────────────────
   if (activeGroup === 'portfolio') {
-    if (activeSubTab === 'action')    return <ActionCenterView />
     if (activeSubTab === 'positions') return <MyPositionsView />
     if (activeSubTab === 'sizing')    return <SizingView />
     if (activeSubTab === 'catalysts') return <CatalystView />
