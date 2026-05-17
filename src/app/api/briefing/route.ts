@@ -33,8 +33,8 @@ export async function GET(req: Request) {
         .from('briefings')
         .select('*')
         .eq('user_id', user.id)
-        .gte('generated_at', cutoff)
-        .order('generated_at', { ascending: false })
+        .gte('created_at', cutoff)
+        .order('created_at', { ascending: false })
         .limit(1)
         .single()
 
@@ -60,9 +60,9 @@ export async function GET(req: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: recentVerdicts } = await (supabase as any)
       .from('verdicts')
-      .select('ticker, verdict, confidence, score, reasoning, generated_at')
+      .select('ticker, final_verdict, confidence, modules_snapshot, logged_at')
       .eq('user_id', user.id)
-      .order('generated_at', { ascending: false })
+      .order('logged_at', { ascending: false })
       .limit(10)
 
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'your-anthropic-key-here') {
@@ -89,8 +89,11 @@ export async function GET(req: Request) {
     }) => `- ${w.ticker} (${w.sector}), score ${w.score}, conviction ${w.conviction}/5`).join('\n')
 
     const verdictSummary = (recentVerdicts ?? []).map((v: {
-      ticker: string; verdict: string; confidence: number; reasoning: string
-    }) => `- ${v.ticker}: ${v.verdict} (conf ${(v.confidence * 100).toFixed(0)}%) — ${v.reasoning.slice(0, 120)}`).join('\n')
+      ticker: string; final_verdict: string; confidence: number; modules_snapshot: { reasoning?: string } | null
+    }) => {
+      const reasoning = v.modules_snapshot?.reasoning ?? ''
+      return `- ${v.ticker}: ${v.final_verdict} (conf ${(v.confidence * 100).toFixed(0)}%)${reasoning ? ' — ' + reasoning.slice(0, 120) : ''}`
+    }).join('\n')
 
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -127,14 +130,13 @@ Be direct, analytical, and professional. No filler.`
     const { data: saved } = await (supabase as any)
       .from('briefings')
       .insert({
-        user_id:      user.id,
+        user_id: user.id,
         content,
-        generated_at: new Date().toISOString(),
       })
       .select()
       .single()
 
-    return NextResponse.json({ briefing: saved ?? { content, generated_at: new Date().toISOString() }, cached: false })
+    return NextResponse.json({ briefing: saved ?? { content, created_at: new Date().toISOString() }, cached: false })
   } catch (err) {
     console.error('Briefing error:', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

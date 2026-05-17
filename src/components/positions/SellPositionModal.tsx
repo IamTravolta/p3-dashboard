@@ -39,19 +39,13 @@ export default function SellPositionModal({ open, onClose, position }: SellPosit
     }
 
     try {
+      // DELETE the position from the DB (sold positions live in their own store slice)
       const resp = await fetch(`/api/positions/${position.id}`, {
-        method:  'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          sold:        true,
-          sell_price:  parsedPrice,
-          sell_date:   sellDate,
-          sell_notes:  notes || null,
-        }),
+        method: 'DELETE',
       })
 
-      const { error: apiErr } = await resp.json()
-      if (apiErr || !resp.ok) throw new Error(apiErr ?? 'Failed to record sale')
+      const j = resp.headers.get('content-type')?.includes('json') ? await resp.json() : {}
+      if (!resp.ok) throw new Error(j.error ?? 'Failed to delete position')
 
       // Build SoldPosition for store
       const sold: SoldPosition = {

@@ -373,11 +373,7 @@ function GenerateBriefingButton() {
     setStatus('loading')
     setErrMsg(null)
     try {
-      const resp = await fetch('/api/briefing', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ force: true }),
-      })
+      const resp = await fetch('/api/briefing?refresh=1')
       const j = await resp.json()
       if (!resp.ok) throw new Error(j.error ?? 'Failed to generate briefing')
       setStatus('done')

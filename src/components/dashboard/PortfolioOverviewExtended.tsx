@@ -277,7 +277,7 @@ function TickerDetailPanel({ ticker }: { ticker: string }) {
       .then((r) => r.json())
       .then((j) => {
         if (j.error) throw new Error(j.error)
-        setData(j)
+        setData(j.latest ?? null)
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load verdict'))
       .finally(() => setLoading(false))

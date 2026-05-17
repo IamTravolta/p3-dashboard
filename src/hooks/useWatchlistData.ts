@@ -102,12 +102,19 @@ export function useWatchlistData() {
     loadWatchlist()
   }, [loadWatchlist])
 
+  // Keep a ref to the latest watchlist so the interval always uses fresh data
+  const watchlistRef = useRef(watchlist)
+  useEffect(() => { watchlistRef.current = watchlist }, [watchlist])
+
   useEffect(() => {
     if (watchlist.length === 0) return
     refreshPrices(watchlist)
 
     if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => refreshPrices(watchlist), PRICE_REFRESH_INTERVAL)
+    timerRef.current = setInterval(
+      () => refreshPrices(watchlistRef.current),
+      PRICE_REFRESH_INTERVAL,
+    )
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [watchlist.length, refreshPrices]) // eslint-disable-line react-hooks/exhaustive-deps
 
