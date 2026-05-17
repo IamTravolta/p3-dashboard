@@ -4,20 +4,22 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type Flow = 'supabase' | 'custom'
+type Flow    = 'supabase' | 'custom'
+type Channel = 'email' | 'sms'
 
 export default function LoginPage() {
-  const [email,   setEmail]   = useState('')
-  const [sentTo,  setSentTo]  = useState('')
-  const [flow,    setFlow]    = useState<Flow>('supabase')
-  const [token,   setToken]   = useState('')
-  const [step,    setStep]    = useState<'email' | 'token'>('email')
-  const [error,   setError]   = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [identifier, setIdentifier] = useState('')
+  const [sentTo,     setSentTo]     = useState('')
+  const [flow,       setFlow]       = useState<Flow>('supabase')
+  const [channel,    setChannel]    = useState<Channel>('email')
+  const [token,      setToken]      = useState('')
+  const [step,       setStep]       = useState<'identifier' | 'token'>('identifier')
+  const [error,      setError]      = useState<string | null>(null)
+  const [loading,    setLoading]    = useState(false)
   const router = useRouter()
 
   // ── Step 1 — request code ─────────────────────────────────────────────────
-  async function handleEmailSubmit(e: React.FormEvent) {
+  async function handleIdentifierSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
@@ -25,7 +27,7 @@ export default function LoginPage() {
     const res  = await fetch('/api/auth/otp', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email }),
+      body:    JSON.stringify({ identifier }),
     })
     const json = await res.json()
     setLoading(false)
@@ -34,6 +36,7 @@ export default function LoginPage() {
 
     setSentTo(json.sentTo)
     setFlow(json.flow)
+    setChannel(json.channel)
     setStep('token')
   }
 
@@ -44,7 +47,6 @@ export default function LoginPage() {
     setLoading(true)
 
     if (flow === 'supabase') {
-      // Primary email — Supabase verifies directly
       const supabase = createClient()
       const { error } = await supabase.auth.verifyOtp({
         email: sentTo,
@@ -55,21 +57,19 @@ export default function LoginPage() {
       if (error) setError(error.message)
       else router.push('/')
     } else {
-      // Linked email — custom verify, returns a magic link redirect
       const res  = await fetch('/api/auth/verify', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ email: sentTo, code: token }),
+        body:    JSON.stringify({ sentTo, channel, code: token }),
       })
       const json = await res.json()
       setLoading(false)
-
       if (!res.ok) { setError(json.error ?? 'Invalid code'); return }
-
-      // Redirect to the generated magic link — completes the Supabase session
       window.location.href = json.redirectTo
     }
   }
+
+  const channelLabel = channel === 'sms' ? 'SMS' : 'email'
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
@@ -80,22 +80,25 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-          {step === 'email' ? (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+          {step === 'identifier' ? (
+            <form onSubmit={handleIdentifierSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1.5">
-                  Email address
+                <label htmlFor="identifier" className="block text-sm font-medium text-zinc-300 mb-1.5">
+                  Email or phone number
                 </label>
                 <input
-                  id="email"
-                  type="email"
+                  id="identifier"
+                  type="text"
                   required
                   autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="you@example.com or +31612345678"
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
                 />
+                <p className="mt-1.5 text-[11px] text-zinc-600">
+                  Use your primary email, a linked email, or a registered phone number
+                </p>
               </div>
 
               {error && (
@@ -106,7 +109,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading || !email}
+                disabled={loading || !identifier.trim()}
                 className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 {loading ? 'Sending…' : 'Send code'}
@@ -115,13 +118,22 @@ export default function LoginPage() {
           ) : (
             <form onSubmit={handleTokenSubmit} className="space-y-4">
               <div className="text-center pb-1 space-y-1">
-                <p className="text-sm text-zinc-400">Enter the code sent to</p>
+                <p className="text-sm text-zinc-400">
+                  {channel === 'sms' ? 'SMS sent to' : 'Code sent to'}
+                </p>
                 <p className="text-sm font-medium text-white break-all">{sentTo}</p>
+                <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  channel === 'sms'
+                    ? 'bg-emerald-600/20 border border-emerald-600/40 text-emerald-400'
+                    : 'bg-indigo-600/20 border border-indigo-600/40 text-indigo-400'
+                }`}>
+                  via {channelLabel.toUpperCase()}
+                </span>
               </div>
 
               <div>
                 <label htmlFor="token" className="block text-sm font-medium text-zinc-300 mb-1.5">
-                  One-time code
+                  6-digit code
                 </label>
                 <input
                   id="token"
@@ -153,10 +165,10 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => { setStep('email'); setToken(''); setSentTo(''); setError(null) }}
+                onClick={() => { setStep('identifier'); setToken(''); setSentTo(''); setError(null) }}
                 className="w-full text-xs text-zinc-500 hover:text-zinc-300 underline"
               >
-                Use a different email
+                Try a different email or number
               </button>
             </form>
           )}
