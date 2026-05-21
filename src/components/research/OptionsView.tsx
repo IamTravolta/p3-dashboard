@@ -49,56 +49,56 @@ export default function OptionsView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-lg font-semibold text-white">Options Strategies</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">Covered calls and cash-secured puts</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📊 Options Strategies</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Covered calls and cash-secured puts</div>
       </div>
 
       {/* Disclaimer */}
-      <div className="flex items-start gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 p-4 text-xs text-zinc-400">
-        <Info size={14} className="shrink-0 mt-0.5 text-zinc-500" />
+      <div className="flex items-start gap-2 rounded-xl p-4 text-xs" style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)' }}>
+        <Info size={14} className="shrink-0 mt-0.5" style={{ color: 'var(--text-tertiary)' }} />
         <span>
-          <strong className="text-zinc-300">Estimates only</strong> — premiums use a 2% ATR placeholder.
+          <strong style={{ color: 'var(--text-primary)' }}>Estimates only</strong> — premiums use a 2% ATR placeholder.
           Use your broker for accurate option pricing. Annualized yield assumes monthly roll.
         </span>
       </div>
 
       {/* Covered Calls */}
       <div>
-        <h3 className="text-sm font-semibold text-zinc-300 mb-2">Covered Calls</h3>
-        <p className="text-xs text-zinc-600 mb-3">Based on your current portfolio positions (5% OTM strike)</p>
+        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Covered Calls</h3>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>Based on your current portfolio positions (5% OTM strike)</p>
         {coveredCallRows.length === 0 ? (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 text-center text-sm text-zinc-500">
+          <div className="surface p-8 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
             Add positions to your portfolio to see covered call estimates.
           </div>
         ) : (
-          <div className="rounded-xl border border-zinc-800 overflow-auto">
+          <div className="surface overflow-auto">
             <table className="w-full text-sm min-w-[500px]">
               <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                   {['Ticker', 'Current Price', 'Strike (5% OTM)', 'Est. Premium', 'Ann. Yield %'].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-left text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {coveredCallRows.map((r) => (
-                  <tr key={r.ticker} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition">
-                    <td className="px-4 py-3 font-bold text-white">{r.ticker}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
-                      {r.price > 0 ? fmtCcy(r.price) : <span className="text-zinc-600">—</span>}
+                  <tr key={r.ticker} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--text-primary)' }}>{r.ticker}</td>
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {r.price > 0 ? fmtCcy(r.price) : <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
-                      {r.price > 0 ? fmtCcy(r.strike) : <span className="text-zinc-600">—</span>}
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {r.price > 0 ? fmtCcy(r.strike) : <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
                     </td>
-                    <td className="px-4 py-3 font-mono text-emerald-400">
-                      {r.price > 0 ? fmtCcy(r.premium) : <span className="text-zinc-600">—</span>}
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--success-text)' }}>
+                      {r.price > 0 ? fmtCcy(r.premium) : <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {r.price > 0 ? (
-                        <span className="font-mono font-semibold text-emerald-400">{fmt(r.yield)}%</span>
+                        <span className="font-mono font-semibold" style={{ color: 'var(--success-text)' }}>{fmt(r.yield)}%</span>
                       ) : (
-                        <span className="text-zinc-600">—</span>
+                        <span style={{ color: 'var(--text-tertiary)' }}>—</span>
                       )}
                     </td>
                   </tr>
@@ -111,40 +111,40 @@ export default function OptionsView() {
 
       {/* Cash-Secured Puts */}
       <div>
-        <h3 className="text-sm font-semibold text-zinc-300 mb-2">Cash-Secured Puts</h3>
-        <p className="text-xs text-zinc-600 mb-3">Based on your watchlist (5% OTM strike — buying at a discount)</p>
+        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Cash-Secured Puts</h3>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-tertiary)' }}>Based on your watchlist (5% OTM strike — buying at a discount)</p>
         {cspRows.length === 0 ? (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 text-center text-sm text-zinc-500">
+          <div className="surface p-8 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
             Add tickers to your watchlist to see cash-secured put estimates.
           </div>
         ) : (
-          <div className="rounded-xl border border-zinc-800 overflow-auto">
+          <div className="surface overflow-auto">
             <table className="w-full text-sm min-w-[500px]">
               <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                   {['Ticker', 'Current Price', 'Strike (5% OTM)', 'Est. Premium', 'Ann. Yield %'].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-left text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {cspRows.map((r) => (
-                  <tr key={r.ticker} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition">
-                    <td className="px-4 py-3 font-bold text-white">{r.ticker}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
-                      {r.price > 0 ? fmtCcy(r.price) : <span className="text-zinc-600">No price</span>}
+                  <tr key={r.ticker} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--text-primary)' }}>{r.ticker}</td>
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {r.price > 0 ? fmtCcy(r.price) : <span style={{ color: 'var(--text-tertiary)' }}>No price</span>}
                     </td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">
-                      {r.price > 0 ? fmtCcy(r.strike) : <span className="text-zinc-600">—</span>}
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {r.price > 0 ? fmtCcy(r.strike) : <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
                     </td>
-                    <td className="px-4 py-3 font-mono text-indigo-400">
-                      {r.price > 0 ? fmtCcy(r.premium) : <span className="text-zinc-600">—</span>}
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--info-text)' }}>
+                      {r.price > 0 ? fmtCcy(r.premium) : <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {r.price > 0 ? (
-                        <span className="font-mono font-semibold text-indigo-400">{fmt(r.yield)}%</span>
+                        <span className="font-mono font-semibold" style={{ color: 'var(--info-text)' }}>{fmt(r.yield)}%</span>
                       ) : (
-                        <span className="text-zinc-600">—</span>
+                        <span style={{ color: 'var(--text-tertiary)' }}>—</span>
                       )}
                     </td>
                   </tr>

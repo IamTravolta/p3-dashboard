@@ -104,19 +104,21 @@ export default function SourcesView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Data Sources</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Quality and freshness of your data connections</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>🔌 Data Sources</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Quality and freshness of your data connections</div>
+          </div>
+          <button
+            onClick={checkAll}
+            disabled={refreshing}
+            className="btn flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+            Refresh Status
+          </button>
         </div>
-        <button
-          onClick={checkAll}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-50 transition"
-        >
-          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-          Refresh Status
-        </button>
       </div>
 
       {/* Source grid */}
@@ -133,21 +135,21 @@ export default function SourcesView() {
 
 function SourceCard({ source }: { source: DataSource }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
+    <div className="surface p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-sm font-semibold text-white">{source.name}</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{source.name}</h3>
             {source.via && (
-              <span className="text-xs text-zinc-600">via {source.via}</span>
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>via {source.via}</span>
             )}
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{source.description}</p>
+          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{source.description}</p>
         </div>
         <StatusPill status={source.status} />
       </div>
       {source.lastChecked && (
-        <p className="text-xs text-zinc-600">
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           Last checked: {new Date(source.lastChecked).toLocaleTimeString()}
         </p>
       )}
@@ -158,24 +160,24 @@ function SourceCard({ source }: { source: DataSource }) {
 function StatusPill({ status }: { status: SourceStatus }) {
   if (status === 'CHECKING') {
     return (
-      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-400">
-        <span className="h-1.5 w-1.5 rounded-full bg-zinc-500 animate-pulse" />
+      <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: 'var(--surface)', color: 'var(--text-secondary)' }}>
+        <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: 'var(--text-tertiary)' }} />
         Checking
       </span>
     )
   }
 
-  const map: Record<Exclude<SourceStatus, 'CHECKING'>, { dot: string; text: string; bg: string }> = {
-    'CONNECTED':      { dot: 'bg-emerald-400', text: 'text-emerald-300', bg: 'bg-emerald-900/30' },
-    'NOT CONFIGURED': { dot: 'bg-zinc-500',    text: 'text-zinc-400',    bg: 'bg-zinc-800'       },
-    'ERROR':          { dot: 'bg-red-400',      text: 'text-red-300',     bg: 'bg-red-900/30'     },
+  const styleMap: Record<Exclude<SourceStatus, 'CHECKING'>, { dot: string; style: React.CSSProperties }> = {
+    'CONNECTED':      { dot: 'var(--success-text)', style: { background: 'var(--success-bg)', color: 'var(--success-text)' } },
+    'NOT CONFIGURED': { dot: 'var(--text-tertiary)', style: { background: 'var(--surface)', color: 'var(--text-secondary)' } },
+    'ERROR':          { dot: 'var(--danger-text)',  style: { background: 'var(--danger-bg)', color: 'var(--danger-text)' } },
   }
 
-  const { dot, text, bg } = map[status]
+  const { dot, style } = styleMap[status]
 
   return (
-    <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${bg} ${text}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+    <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium" style={style}>
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
       {status}
     </span>
   )

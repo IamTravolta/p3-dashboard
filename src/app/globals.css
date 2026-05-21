@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
+/* ── Design tokens ──────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary:        #5B8DEE;
+  --bg:             #1F1F23;
+  --surface:        #2A2A2F;
+  --border:         #3A3A40;
+  --text-primary:   #E8E6E1;
+  --text-secondary: #A0A0A0;
+  --text-tertiary:  #6B6B6B;
+
+  --success-bg:   #1F3525;
+  --success-text: #7DD89F;
+  --info-bg:      #1F2D3F;
+  --info-text:    #7BA8E8;
+  --yellow-bg:    #3A3208;
+  --yellow-text:  #F0D14A;
+  --warning-bg:   #3A220F;
+  --warning-text: #FB923C;
+  --danger-bg:    #3A1A1A;
+  --danger-text:  #F87171;
+  --purple-bg:    #2D1A48;
+  --purple-text:  #C084FC;
+  --teal-bg:      #0F3733;
+  --teal-text:    #5EEAD4;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ── Base ───────────────────────────────────────────────────────────────────── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+/* ── Surface card ───────────────────────────────────────────────────────────── */
+.surface {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+}
+
+/* ── Pills ──────────────────────────────────────────────────────────────────── */
+.pill {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 500;
+  display: inline-block;
+}
+.pill-success { background: var(--success-bg); color: var(--success-text); }
+.pill-info    { background: var(--info-bg);    color: var(--info-text);    }
+.pill-yellow  { background: var(--yellow-bg);  color: var(--yellow-text);  }
+.pill-warning { background: var(--warning-bg); color: var(--warning-text); }
+.pill-danger  { background: var(--danger-bg);  color: var(--danger-text);  }
+.pill-purple  { background: var(--purple-bg);  color: var(--purple-text);  }
+.pill-teal    { background: var(--teal-bg);    color: var(--teal-text);    }
+.pill-neutral { background: var(--bg); color: var(--text-secondary); border: 0.5px solid var(--border); }
+
+/* ── Buttons ────────────────────────────────────────────────────────────────── */
+.btn {
+  font-size: 12px;
+  padding: 8px 16px;
+  min-height: 32px;
+  border: 0.5px solid var(--border);
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.btn:hover {
+  background: var(--bg);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.btn-primary:hover {
+  background: #4a7de0;
+  border-color: #4a7de0;
+}
+.btn-success {
+  background: var(--success-text);
+  color: #0A1A0A;
+  border-color: var(--success-text);
+}
+.btn-danger {
+  background: var(--danger-text);
+  color: #1A0A0A;
+  border-color: var(--danger-text);
+}
+
+/* ── KPI card ───────────────────────────────────────────────────────────────── */
+.kpi-card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+/* ── Progress ───────────────────────────────────────────────────────────────── */
+.progress-track {
+  background: var(--bg);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  transition: width 0.3s;
 }

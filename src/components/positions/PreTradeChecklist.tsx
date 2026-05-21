@@ -71,7 +71,12 @@ const QUESTIONS: Array<{
   },
 ]
 
-const INPUT_CLS = 'w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition resize-none'
+const inputStyle: React.CSSProperties = {
+  border: '0.5px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text-primary)',
+}
+const inputClass = 'w-full rounded-lg px-3 py-2.5 text-sm outline-none transition resize-none placeholder-zinc-600'
 
 export default function PreTradeChecklist({ ticker, onSubmit, onCancel }: PreTradeChecklistProps) {
   const [answers, setAnswers] = useState<ChecklistAnswers>({
@@ -97,27 +102,43 @@ export default function PreTradeChecklist({ ticker, onSubmit, onCancel }: PreTra
   }
 
   const completedCount = QUESTIONS.filter((q) => isValid(q.key)).length
+  const progressPct = (completedCount / 6) * 100
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 bg-black/70 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-2xl rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl mb-8">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className="w-full max-w-2xl rounded-2xl shadow-2xl mb-8"
+        style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}
+      >
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950 rounded-t-2xl px-6 py-4">
+        <div
+          className="sticky top-0 z-10 rounded-t-2xl px-6 py-4"
+          style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--surface)' }}
+        >
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-lg font-bold text-white">{ticker}</span>
-                <span className="rounded-full bg-amber-900/40 border border-amber-700/50 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
+                <span className="font-mono text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {ticker}
+                </span>
+                <span
+                  className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  style={{ background: 'var(--yellow-bg)', border: '0.5px solid var(--yellow-text)', color: 'var(--yellow-text)' }}
+                >
                   Pre-Trade Checklist
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                 Answer all 6 questions before this position is added. This takes 3 minutes and saves hours of regret.
               </p>
             </div>
             <button
               onClick={onCancel}
-              className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white transition shrink-0 ml-4"
+              className="rounded-md p-1.5 transition shrink-0 ml-4"
+              style={{ color: 'var(--text-secondary)' }}
             >
               ✕
             </button>
@@ -126,15 +147,21 @@ export default function PreTradeChecklist({ ticker, onSubmit, onCancel }: PreTra
           {/* Progress bar */}
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-zinc-500">{completedCount} of 6 answered</span>
-              <span className={`font-medium ${allValid ? 'text-emerald-400' : 'text-zinc-500'}`}>
+              <span style={{ color: 'var(--text-tertiary)' }}>{completedCount} of 6 answered</span>
+              <span
+                className="font-medium"
+                style={{ color: allValid ? 'var(--success-text)' : 'var(--text-tertiary)' }}
+              >
                 {allValid ? '✓ Ready to add' : `${6 - completedCount} remaining`}
               </span>
             </div>
-            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="progress-track">
               <div
-                className={`h-full rounded-full transition-all duration-300 ${allValid ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                style={{ width: `${(completedCount / 6) * 100}%` }}
+                className="progress-fill"
+                style={{
+                  width: `${progressPct}%`,
+                  background: allValid ? 'var(--success-text)' : 'var(--primary)',
+                }}
               />
             </div>
           </div>
@@ -148,19 +175,29 @@ export default function PreTradeChecklist({ ticker, onSubmit, onCancel }: PreTra
             return (
               <div key={q.key} className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <label className="block text-sm font-semibold text-zinc-200">{q.label}</label>
-                  {complete && <span className="text-emerald-400 text-xs">✓</span>}
+                  <label className="block text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {q.label}
+                  </label>
+                  {complete && (
+                    <span className="text-xs" style={{ color: 'var(--success-text)' }}>✓</span>
+                  )}
                 </div>
-                <p className="text-xs text-zinc-500 italic">{q.hint}</p>
+                <p className="text-xs italic" style={{ color: 'var(--text-tertiary)' }}>{q.hint}</p>
                 <textarea
                   rows={2}
                   value={answers[q.key]}
                   onChange={(e) => set(q.key, e.target.value)}
                   placeholder={q.placeholder}
-                  className={`${INPUT_CLS} ${touched ? 'border-red-700 focus:border-red-600 focus:ring-red-600/30' : ''}`}
+                  className={inputClass}
+                  style={touched
+                    ? { ...inputStyle, border: '0.5px solid var(--danger-text)' }
+                    : inputStyle
+                  }
                 />
                 {touched && (
-                  <p className="text-xs text-red-400">Please provide a meaningful answer (at least 10 characters).</p>
+                  <p className="text-xs" style={{ color: 'var(--danger-text)' }}>
+                    Please provide a meaningful answer (at least 10 characters).
+                  </p>
                 )}
               </div>
             )
@@ -168,27 +205,34 @@ export default function PreTradeChecklist({ ticker, onSubmit, onCancel }: PreTra
 
           {/* Warning if attempted but not valid */}
           {attempted && !allValid && (
-            <div className="rounded-lg border border-amber-800 bg-amber-900/20 px-4 py-3 text-sm text-amber-400">
+            <div
+              className="rounded-lg px-4 py-3 text-sm"
+              style={{ border: '0.5px solid var(--yellow-text)', background: 'var(--yellow-bg)', color: 'var(--yellow-text)' }}
+            >
               Complete all 6 questions before adding the position.
             </div>
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+          <div
+            className="flex items-center justify-between pt-2"
+            style={{ borderTop: '0.5px solid var(--border)' }}
+          >
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
+              className="px-4 py-2 rounded-lg text-sm transition"
+              style={{ color: 'var(--text-secondary)' }}
             >
-              Cancel — don't add
+              Cancel — don&apos;t add
             </button>
             <button
               type="submit"
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition ${
-                allValid
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-              }`}
+              className="px-6 py-2.5 rounded-lg text-sm font-semibold transition"
+              style={allValid
+                ? { background: 'var(--primary)', color: '#fff' }
+                : { background: 'var(--surface)', color: 'var(--text-tertiary)', cursor: 'not-allowed' }
+              }
             >
               {allValid ? `Add ${ticker} to portfolio →` : 'Complete all questions first'}
             </button>

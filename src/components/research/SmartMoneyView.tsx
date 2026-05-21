@@ -18,18 +18,18 @@ interface TickerSmartMoney {
   topHolders:          Holder[]
 }
 
-const signalStyles: Record<string, string> = {
-  BUY:     'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50',
-  NEUTRAL: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
-  SELL:    'bg-red-900/30 text-red-400 border border-red-800/50',
+const signalPillClass: Record<string, string> = {
+  BUY:     'pill pill-success',
+  NEUTRAL: 'pill pill-neutral',
+  SELL:    'pill pill-danger',
 }
 
 function overallSignal(rows: TickerSmartMoney[]): { label: string; color: string } {
   const buys  = rows.filter((r) => r.signal === 'BUY').length
   const sells = rows.filter((r) => r.signal === 'SELL').length
-  if (buys > sells * 1.5) return { label: 'BULLISH', color: 'text-emerald-400' }
-  if (sells > buys * 1.5) return { label: 'BEARISH', color: 'text-red-400' }
-  return { label: 'NEUTRAL', color: 'text-zinc-400' }
+  if (buys > sells * 1.5) return { label: 'BULLISH', color: 'var(--success-text)' }
+  if (sells > buys * 1.5) return { label: 'BEARISH', color: 'var(--danger-text)' }
+  return { label: 'NEUTRAL', color: 'var(--text-secondary)' }
 }
 
 export default function SmartMoneyView() {
@@ -67,24 +67,22 @@ export default function SmartMoneyView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Smart Money</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Institutional ownership and hedge fund activity</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🏦 Smart Money</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>Institutional ownership and hedge fund activity</div>
+          </div>
+          <button onClick={analyze} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
+            <Building2 size={13} />
+            {loading ? 'Analyzing…' : 'Analyze Smart Money'}
+          </button>
         </div>
-        <button
-          onClick={analyze}
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition"
-        >
-          <Building2 size={13} />
-          {loading ? 'Analyzing…' : 'Analyze Smart Money'}
-        </button>
       </div>
 
       {/* Backend not configured */}
       {!railwayUrl && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-800/50 bg-amber-900/20 p-4 text-sm text-amber-400">
+        <div className="flex items-center gap-2 rounded-xl p-4 text-sm" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
           <AlertTriangle size={15} className="shrink-0" />
           Backend not configured — add your Railway URL in Settings.
         </div>
@@ -92,7 +90,7 @@ export default function SmartMoneyView() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-4 text-sm text-red-400">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
@@ -101,16 +99,13 @@ export default function SmartMoneyView() {
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 animate-pulse">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
+            <div key={i} className="surface p-4 space-y-3">
               <div className="flex justify-between">
-                <div className="h-5 w-16 rounded bg-zinc-800" />
-                <div className="h-5 w-14 rounded-full bg-zinc-800" />
+                <div className="h-5 w-16 rounded" style={{ background: 'var(--bg)' }} />
+                <div className="h-5 w-14 rounded-full" style={{ background: 'var(--bg)' }} />
               </div>
-              <div className="h-3 w-full rounded bg-zinc-800/60" />
-              <div className="h-3 w-3/4 rounded bg-zinc-800/60" />
-              <div className="space-y-1.5 pt-2">
-                {[0, 1, 2].map((j) => <div key={j} className="h-2.5 w-full rounded bg-zinc-800/40" />)}
-              </div>
+              <div className="h-3 w-full rounded" style={{ background: 'var(--bg)' }} />
+              <div className="h-3 w-3/4 rounded" style={{ background: 'var(--bg)' }} />
             </div>
           ))}
         </div>
@@ -118,22 +113,22 @@ export default function SmartMoneyView() {
 
       {/* Empty state */}
       {!loading && results.length === 0 && !error && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-10 text-center">
-          <Building2 size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No smart money data loaded yet.</p>
-          <p className="text-xs text-zinc-600 mt-1">Click &ldquo;Analyze Smart Money&rdquo; to fetch institutional activity.</p>
+        <div className="surface p-10 text-center">
+          <Building2 size={28} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No smart money data loaded yet.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Click &ldquo;Analyze Smart Money&rdquo; to fetch institutional activity.</p>
         </div>
       )}
 
       {/* Summary */}
       {!loading && summary && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 flex items-center gap-4">
-          <Building2 size={18} className="text-indigo-400" />
+        <div className="surface p-4 flex items-center gap-4">
+          <Building2 size={18} style={{ color: 'var(--primary)' }} />
           <div>
-            <p className="text-xs text-zinc-500">Portfolio Smart Money Signal</p>
-            <p className={`text-lg font-bold mt-0.5 ${summary.color}`}>{summary.label}</p>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Portfolio Smart Money Signal</p>
+            <p className="text-lg font-bold mt-0.5" style={{ color: summary.color }}>{summary.label}</p>
           </div>
-          <div className="ml-auto text-xs text-zinc-600">{results.length} tickers analyzed</div>
+          <div className="ml-auto text-xs" style={{ color: 'var(--text-tertiary)' }}>{results.length} tickers analyzed</div>
         </div>
       )}
 
@@ -141,22 +136,22 @@ export default function SmartMoneyView() {
       {!loading && results.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {results.map((item) => (
-            <div key={item.ticker} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
+            <div key={item.ticker} className="surface p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-base font-bold text-white">{item.ticker}</span>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${signalStyles[item.signal] ?? signalStyles.NEUTRAL}`}>
+                <span className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{item.ticker}</span>
+                <span className={signalPillClass[item.signal] ?? signalPillClass.NEUTRAL}>
                   {item.signal}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-zinc-800/50 p-2">
-                  <p className="text-xs text-zinc-500">Inst. Ownership</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{item.institutionalPct?.toFixed(1)}%</p>
+                <div className="rounded-lg p-2" style={{ background: 'var(--bg)' }}>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Inst. Ownership</p>
+                  <p className="text-lg font-bold mt-0.5" style={{ color: 'var(--text-primary)' }}>{item.institutionalPct?.toFixed(1)}%</p>
                 </div>
-                <div className="rounded-lg bg-zinc-800/50 p-2">
-                  <p className="text-xs text-zinc-500">Net Change</p>
-                  <p className={`text-lg font-bold mt-0.5 ${item.netChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <div className="rounded-lg p-2" style={{ background: 'var(--bg)' }}>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Net Change</p>
+                  <p className="text-lg font-bold mt-0.5" style={{ color: item.netChange >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                     {item.netChange >= 0 ? '+' : ''}{item.netChange?.toFixed(1)}%
                   </p>
                 </div>
@@ -164,14 +159,14 @@ export default function SmartMoneyView() {
 
               {item.topHolders?.length > 0 && (
                 <div>
-                  <p className="text-xs text-zinc-500 mb-2">Top Holders</p>
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Top Holders</p>
                   <div className="space-y-1.5">
                     {item.topHolders.slice(0, 4).map((h, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400 truncate max-w-[60%]">{h.name}</span>
+                        <span className="truncate max-w-[60%]" style={{ color: 'var(--text-secondary)' }}>{h.name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-zinc-300 font-mono">{h.pct?.toFixed(1)}%</span>
-                          <span className={h.change >= 0 ? 'text-emerald-500' : 'text-red-500'}>
+                          <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{h.pct?.toFixed(1)}%</span>
+                          <span style={{ color: h.change >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                             {h.change >= 0 ? '▲' : '▼'}
                           </span>
                         </div>

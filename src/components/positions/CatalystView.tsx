@@ -16,14 +16,14 @@ interface CatalystState {
 
 function BackendBanner() {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-amber-700/50 bg-amber-900/20 px-4 py-3">
-      <span className="text-amber-400 text-base shrink-0 mt-0.5">⚠</span>
+    <div className="flex items-start gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)' }}>
+      <span className="text-base shrink-0 mt-0.5" style={{ color: 'var(--warning-text)' }}>⚠</span>
       <div>
-        <p className="text-sm font-medium text-amber-300">Railway backend not connected</p>
-        <p className="text-xs text-amber-500 mt-0.5">
+        <p className="text-sm font-medium" style={{ color: 'var(--warning-text)' }}>Railway backend not connected</p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--warning-text)', opacity: 0.8 }}>
           Configure <span className="font-mono">RAILWAY_BACKEND_URL</span> in your environment and
           set the Railway URL in{' '}
-          <span className="font-medium text-amber-400">Settings</span> to fetch live catalyst data.
+          <span className="font-medium">Settings</span> to fetch live catalyst data.
         </p>
       </div>
     </div>
@@ -54,36 +54,34 @@ function CatalystResults({ data }: { data: any }) {
         const importance  = item.importance    ?? item.priority    ?? item.impact      ?? null
 
         return (
-          <div key={i} className="rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-3 flex items-start gap-3">
+          <div key={i} className="surface px-3 py-3 flex items-start gap-3" style={{ borderRadius: 8 }}>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 {ticker && (
-                  <span className="rounded-full bg-indigo-900/50 border border-indigo-700/60 px-2 py-0.5 text-xs font-mono font-semibold text-indigo-300">
+                  <span className="pill pill-info font-mono font-semibold">
                     {ticker}
                   </span>
                 )}
-                <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-xs text-zinc-300 font-medium">
+                <span className="pill pill-neutral">
                   {eventType}
                 </span>
                 {importance && (
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    String(importance).toLowerCase() === 'high'
-                      ? 'bg-red-900/50 text-red-300'
-                      : String(importance).toLowerCase() === 'medium'
-                      ? 'bg-amber-900/50 text-amber-300'
-                      : 'bg-zinc-700 text-zinc-400'
+                  <span className={`pill ${
+                    String(importance).toLowerCase() === 'high' ? 'pill-danger' :
+                    String(importance).toLowerCase() === 'medium' ? 'pill-warning' :
+                    'pill-neutral'
                   }`}>
                     {importance}
                   </span>
                 )}
                 {date && (
-                  <span className="text-xs font-mono text-zinc-500 ml-auto">
+                  <span className="text-xs font-mono ml-auto" style={{ color: 'var(--text-secondary)' }}>
                     {new Date(date).toLocaleDateString()}
                   </span>
                 )}
               </div>
               {description && (
-                <p className="text-xs text-zinc-400 leading-relaxed">{description}</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{description}</p>
               )}
             </div>
           </div>
@@ -120,21 +118,21 @@ function CatalystCard({ ticker }: { ticker: string }) {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="surface p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-semibold text-white">
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
             Upcoming catalysts for{' '}
-            <span className="font-mono text-indigo-400">{ticker}</span>
+            <span className="font-mono" style={{ color: 'var(--primary)' }}>{ticker}</span>
           </h3>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
             Earnings, FDA events, product launches, macro triggers
           </p>
         </div>
         <button
           onClick={fetchCatalysts}
           disabled={state.loading}
-          className="flex items-center gap-1.5 rounded-md bg-indigo-900/50 px-3 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-800 transition disabled:opacity-50"
+          className="btn flex items-center gap-1.5 disabled:opacity-50"
         >
           {state.loading ? (
             <>
@@ -158,7 +156,7 @@ function CatalystCard({ ticker }: { ticker: string }) {
 
       {/* States */}
       {state.error && (
-        <div className="rounded-lg bg-red-900/20 border border-red-800 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg px-3 py-2 text-xs" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-text)', color: 'var(--danger-text)' }}>
           {state.error}
         </div>
       )}
@@ -168,8 +166,8 @@ function CatalystCard({ ticker }: { ticker: string }) {
       )}
 
       {!state.loading && !state.data && !state.error && (
-        <div className="rounded-lg border border-dashed border-zinc-800 py-6 text-center">
-          <p className="text-xs text-zinc-600">
+        <div className="rounded-lg py-6 text-center" style={{ border: '1px dashed var(--border)' }}>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
             Click Fetch to load catalyst data from the Railway backend.
           </p>
         </div>
@@ -180,9 +178,9 @@ function CatalystCard({ ticker }: { ticker: string }) {
 
 function MarketEventsSection() {
   return (
-    <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-5 py-5">
-      <h3 className="text-sm font-semibold text-white mb-1">Market Events</h3>
-      <p className="text-xs text-zinc-500 leading-relaxed">
+    <div className="rounded-xl px-5 py-5" style={{ border: '1px dashed var(--border)' }}>
+      <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Market Events</h3>
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
         Connect Railway backend in Settings to see upcoming catalysts.
       </p>
     </div>
@@ -200,11 +198,9 @@ export default function CatalystView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h2 className="text-sm font-semibold text-white">Catalyst Calendar</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">
-          Track upcoming events that may move your positions.
-        </p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ Catalyst Calendar</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Track upcoming events that may move your positions</div>
       </div>
 
       {/* Backend banner */}
@@ -212,8 +208,8 @@ export default function CatalystView() {
 
       {/* Position catalyst cards */}
       {positions.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 py-12 text-center">
-          <p className="text-zinc-500 text-sm">No positions in your portfolio yet.</p>
+        <div className="rounded-xl py-12 text-center" style={{ border: '1px dashed var(--border)' }}>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No positions in your portfolio yet.</p>
         </div>
       ) : (
         <div className="space-y-4">

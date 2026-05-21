@@ -39,14 +39,16 @@ function classifyWatchlistItem(
   }
 }
 
+const TIER_STYLES: Record<Tier, { pillStyle: React.CSSProperties; headerColor: string }> = {
+  HOT:  { pillStyle: { background: 'var(--danger-bg)', color: 'var(--danger-text)', border: '1px solid var(--danger-text)' }, headerColor: 'var(--danger-text)' },
+  WARM: { pillStyle: { background: 'var(--warning-bg)', color: 'var(--warning-text)', border: '1px solid var(--warning-text)' }, headerColor: 'var(--warning-text)' },
+  COOL: { pillStyle: { background: 'var(--surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }, headerColor: 'var(--text-secondary)' },
+}
+
 function TierBadge({ tier }: { tier: Tier }) {
-  const styles: Record<Tier, string> = {
-    HOT:  'bg-red-900/70 text-red-300 border-red-700',
-    WARM: 'bg-amber-900/70 text-amber-300 border-amber-700',
-    COOL: 'bg-zinc-800 text-zinc-400 border-zinc-700',
-  }
+  const { pillStyle } = TIER_STYLES[tier]
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${styles[tier]}`}>
+    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={pillStyle}>
       {tier}
     </span>
   )
@@ -54,60 +56,48 @@ function TierBadge({ tier }: { tier: Tier }) {
 
 function VerdictPill({ verdict }: { verdict?: string }) {
   if (!verdict) return null
-  const colors: Record<string, string> = {
-    BUY:  'bg-emerald-900/60 text-emerald-300',
-    SELL: 'bg-red-900/60 text-red-300',
-    HOLD: 'bg-zinc-800 text-zinc-400',
-  }
-  return (
-    <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${colors[verdict] ?? colors.HOLD}`}>
-      {verdict}
-    </span>
-  )
+  const v = verdict.toUpperCase()
+  const pillClass = v === 'BUY' ? 'pill pill-success' : v === 'SELL' ? 'pill pill-danger' : 'pill pill-neutral'
+  return <span className={`${pillClass} text-[10px]`}>{verdict}</span>
 }
 
-function PipelineCard({ card }: { card: PipelineCard }) {
+function PipelineCardItem({ card }: { card: PipelineCard }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-2 hover:border-zinc-700 transition">
+    <div className="surface p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <TickerChip ticker={card.ticker} />
         <TierBadge tier={card.tier} />
       </div>
       {card.name && (
-        <p className="text-xs text-zinc-500 truncate">{card.name}</p>
+        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{card.name}</p>
       )}
       <div className="flex items-center gap-2 flex-wrap">
         {card.verdict && <VerdictPill verdict={card.verdict} />}
         {card.confidence !== undefined && (
-          <span className="text-[10px] text-zinc-500">{(card.confidence * 100).toFixed(0)}% conf</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{(card.confidence * 100).toFixed(0)}% conf</span>
         )}
-        <span className="ml-auto text-[10px] text-zinc-600">{card.source}</span>
+        <span className="ml-auto text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{card.source}</span>
       </div>
     </div>
   )
 }
 
 function TierColumn({ tier, cards }: { tier: Tier; cards: PipelineCard[] }) {
-  const headers: Record<Tier, { label: string; color: string }> = {
-    HOT:  { label: 'HOT', color: 'text-red-400' },
-    WARM: { label: 'WARM', color: 'text-amber-400' },
-    COOL: { label: 'COOL', color: 'text-zinc-500' },
-  }
-  const { label, color } = headers[tier]
+  const { headerColor } = TIER_STYLES[tier]
   return (
     <div className="flex flex-col gap-2">
-      <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide ${color} mb-1`}>
-        {label}
-        <span className="rounded-full bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">
+      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide mb-1" style={{ color: headerColor }}>
+        {tier}
+        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: 'var(--surface)', color: 'var(--text-secondary)' }}>
           {cards.length}
         </span>
       </div>
       {cards.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-800 p-4 text-center text-xs text-zinc-600">
+        <div className="surface p-4 text-center text-xs" style={{ border: '1px dashed var(--border)', color: 'var(--text-tertiary)' }}>
           None
         </div>
       ) : (
-        cards.map((c) => <PipelineCard key={`${c.ticker}-${c.source}`} card={c} />)
+        cards.map((c) => <PipelineCardItem key={`${c.ticker}-${c.source}`} card={c} />)
       )}
     </div>
   )
@@ -167,42 +157,44 @@ export default function PipelineUnifiedView() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-white">Pipeline</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Unified view of watchlist and positions ranked by signal strength
-          </p>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>🚦 Pipeline</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.85 }}>
+              Unified view of watchlist and positions ranked by signal strength
+            </div>
+          </div>
+          <button
+            onClick={runBulkAnalysis}
+            disabled={loading}
+            className="btn btn-primary flex items-center gap-2 disabled:opacity-60"
+          >
+            {loading ? (
+              <>
+                <span className="h-3 w-3 rounded-full border-2 animate-spin" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+                Analysing…
+              </>
+            ) : (
+              'Run Full Analysis'
+            )}
+          </button>
         </div>
-        <button
-          onClick={runBulkAnalysis}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 transition"
-        >
-          {loading ? (
-            <>
-              <span className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              Analysing…
-            </>
-          ) : (
-            'Run Full Analysis'
-          )}
-        </button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-800 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
 
       {isEmpty ? (
-        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 py-16 text-center">
-          <p className="text-sm text-zinc-400 font-medium">No pipeline items yet</p>
-          <p className="text-xs text-zinc-600 mt-1">
-            Add tickers to your Watchlist, then click <strong className="text-zinc-400">Run Full Analysis</strong>
+        <div className="surface py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>No pipeline items yet</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            Add tickers to your Watchlist, then click <strong style={{ color: 'var(--text-secondary)' }}>Run Full Analysis</strong>
           </p>
         </div>
       ) : (

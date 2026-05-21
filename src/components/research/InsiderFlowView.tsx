@@ -21,10 +21,10 @@ interface InsiderData {
   sellCount:       number
 }
 
-const signalPill: Record<string, string> = {
-  BUY:     'bg-emerald-900/40 text-emerald-400 border border-emerald-800/50',
-  NEUTRAL: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
-  SELL:    'bg-red-900/40 text-red-400 border border-red-800/50',
+const signalPillClass: Record<string, string> = {
+  BUY:     'pill pill-success',
+  NEUTRAL: 'pill pill-neutral',
+  SELL:    'pill pill-danger',
 }
 
 function fmt(n: number) {
@@ -73,24 +73,22 @@ export default function InsiderFlowView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Insider Flow</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">SEC Form 4 insider buying and selling activity</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>👤 Insider Flow</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.85 }}>SEC Form 4 insider buying and selling activity</div>
+          </div>
+          <button onClick={fetch_} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
+            <Users size={13} />
+            {loading ? 'Fetching…' : 'Fetch Insider Data'}
+          </button>
         </div>
-        <button
-          onClick={fetch_}
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition"
-        >
-          <Users size={13} />
-          {loading ? 'Fetching…' : 'Fetch Insider Data'}
-        </button>
       </div>
 
       {/* Backend not configured */}
       {!railwayUrl && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-800/50 bg-amber-900/20 p-4 text-sm text-amber-400">
+        <div className="flex items-center gap-2 rounded-xl p-4 text-sm" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
           <AlertTriangle size={15} className="shrink-0" />
           Backend not configured — add your Railway URL in Settings.
         </div>
@@ -98,7 +96,7 @@ export default function InsiderFlowView() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-4 text-sm text-red-400">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
@@ -108,19 +106,19 @@ export default function InsiderFlowView() {
         <div className="animate-pulse space-y-3">
           <div className="flex gap-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-16 flex-1 rounded-xl bg-zinc-800/60" />
+              <div key={i} className="h-16 flex-1 rounded-xl" style={{ background: 'var(--surface)' }} />
             ))}
           </div>
-          <div className="h-64 rounded-xl bg-zinc-800/40" />
+          <div className="h-64 rounded-xl" style={{ background: 'var(--surface)' }} />
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !data && !error && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-10 text-center">
-          <Users size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No insider data loaded yet.</p>
-          <p className="text-xs text-zinc-600 mt-1">Click &ldquo;Fetch Insider Data&rdquo; to pull SEC Form 4 filings.</p>
+        <div className="surface p-10 text-center">
+          <Users size={28} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No insider data loaded yet.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Click &ldquo;Fetch Insider Data&rdquo; to pull SEC Form 4 filings.</p>
         </div>
       )}
 
@@ -128,54 +126,54 @@ export default function InsiderFlowView() {
       {!loading && data && (
         <>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-              <p className="text-xs text-zinc-500">Net Insider Buying</p>
-              <p className={`text-2xl font-bold mt-1 ${data.netBuyingM >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className="kpi-card">
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Net Insider Buying</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: data.netBuyingM >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                 {data.netBuyingM >= 0 ? '+' : ''}{data.netBuyingM.toFixed(1)}M
               </p>
             </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-              <p className="text-xs text-zinc-500">Buy Transactions</p>
+            <div className="kpi-card">
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Buy Transactions</p>
               <div className="flex items-center gap-1.5 mt-1">
-                <TrendingUp size={16} className="text-emerald-400" />
-                <p className="text-2xl font-bold text-emerald-400">{data.buyCount}</p>
+                <TrendingUp size={16} style={{ color: 'var(--success-text)' }} />
+                <p className="text-2xl font-bold" style={{ color: 'var(--success-text)' }}>{data.buyCount}</p>
               </div>
             </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-              <p className="text-xs text-zinc-500">Sell Transactions</p>
+            <div className="kpi-card">
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Sell Transactions</p>
               <div className="flex items-center gap-1.5 mt-1">
-                <TrendingDown size={16} className="text-red-400" />
-                <p className="text-2xl font-bold text-red-400">{data.sellCount}</p>
+                <TrendingDown size={16} style={{ color: 'var(--danger-text)' }} />
+                <p className="text-2xl font-bold" style={{ color: 'var(--danger-text)' }}>{data.sellCount}</p>
               </div>
             </div>
           </div>
 
           {/* Table */}
           {data.rows.length > 0 ? (
-            <div className="rounded-xl border border-zinc-800 overflow-auto">
+            <div className="surface overflow-auto">
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
-                  <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                  <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                     {['Ticker', 'Insider Name', 'Type', 'Shares', 'Value', 'Date', 'Signal'].map((h) => (
-                      <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
+                      <th key={h} className="px-4 py-2.5 text-left text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {data.rows.map((row, i) => (
-                    <tr key={i} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition">
-                      <td className="px-4 py-3 font-semibold text-white">{row.ticker}</td>
-                      <td className="px-4 py-3 text-zinc-300">{row.insiderName}</td>
-                      <td className={`px-4 py-3 text-xs font-semibold ${row.type === 'BUY' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <tr key={i} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                      <td className="px-4 py-3 font-semibold" style={{ color: 'var(--text-primary)' }}>{row.ticker}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{row.insiderName}</td>
+                      <td className="px-4 py-3 text-xs font-semibold" style={{ color: row.type === 'BUY' ? 'var(--success-text)' : 'var(--danger-text)' }}>
                         {row.type}
                       </td>
-                      <td className="px-4 py-3 font-mono text-zinc-400">{row.shares?.toLocaleString()}</td>
-                      <td className="px-4 py-3 font-mono text-zinc-300">{fmt(row.value)}</td>
-                      <td className="px-4 py-3 text-xs text-zinc-500">
+                      <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>{row.shares?.toLocaleString()}</td>
+                      <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>{fmt(row.value)}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
                         {row.date ? new Date(row.date).toLocaleDateString() : '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${signalPill[row.signal] ?? signalPill.NEUTRAL}`}>
+                        <span className={signalPillClass[row.signal] ?? signalPillClass.NEUTRAL}>
                           {row.signal}
                         </span>
                       </td>
@@ -185,7 +183,7 @@ export default function InsiderFlowView() {
               </table>
             </div>
           ) : (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 text-center text-sm text-zinc-500">
+            <div className="surface p-8 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
               No insider transactions found for your tickers.
             </div>
           )}

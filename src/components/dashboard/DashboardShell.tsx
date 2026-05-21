@@ -25,8 +25,8 @@ function SyncStatus({ isSyncing, lastFetched }: { isSyncing: boolean; lastFetche
   }, [lastFetched])
 
   if (isSyncing) return (
-    <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-400">
-      <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+    <span className="hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)' }}>
+      <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: 'var(--primary)' }} />
       Syncing…
     </span>
   )
@@ -34,8 +34,8 @@ function SyncStatus({ isSyncing, lastFetched }: { isSyncing: boolean; lastFetche
   if (!label) return null
 
   return (
-    <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-500">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+    <span className="hidden sm:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-tertiary)' }}>
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--success-text)' }} />
       {label}
     </span>
   )
@@ -46,14 +46,15 @@ function AlertBell({ unread, onClick }: { unread: number; onClick: () => void })
   return (
     <button
       onClick={onClick}
-      className="relative rounded-lg border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-500 hover:text-white hover:border-zinc-700 transition"
+      className="relative p-1.5 transition"
+      style={{ borderRadius: 8, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-secondary)' }}
       title={unread > 0 ? `${unread} unread alert${unread > 1 ? 's' : ''}` : 'No alerts'}
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
       {unread > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[9px] font-bold text-white">
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ background: 'var(--primary)' }}>
           {unread > 9 ? '9+' : unread}
         </span>
       )}
@@ -203,15 +204,15 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const latestAlerts = alerts.slice(0, 10)
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen" style={{ background: 'var(--bg)', color: 'var(--text-primary)' }}>
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur">
+      <header className="sticky top-0 z-40 backdrop-blur" style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--surface)' }}>
         <div className="mx-auto max-w-screen-xl px-4">
           {/* Primary row */}
           <div className="flex items-center gap-2 py-2.5">
             {/* Logo */}
-            <span className="text-base font-bold tracking-tight text-white shrink-0">P3</span>
-            <span className="hidden text-xs text-zinc-600 sm:block mr-3">Portfolio Platform</span>
+            <span className="text-base font-bold tracking-tight shrink-0" style={{ color: 'var(--text-primary)' }}>P3</span>
+            <span className="hidden text-xs sm:block mr-3" style={{ color: 'var(--text-tertiary)' }}>Portfolio Platform</span>
 
             {/* Primary group nav */}
             <nav className="flex items-center gap-0.5 overflow-x-auto flex-1 scrollbar-none">
@@ -219,12 +220,16 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                 <button
                   key={group.id}
                   onClick={() => setActiveGroup(group.id)}
-                  className={`
-                    flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-semibold transition shrink-0
-                    ${activeGroup === group.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}
-                  `}
+                  className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-sm font-semibold transition shrink-0"
+                  style={activeGroup === group.id ? {
+                    background: 'rgba(255,255,255,0.10)',
+                    color: '#FFFFFF',
+                    borderBottom: '2px solid #378ADD',
+                    borderRadius: '6px 6px 0 0',
+                  } : {
+                    background: 'transparent',
+                    color: 'var(--text-secondary)',
+                  }}
                 >
                   {group.icon && <span className="text-xs">{group.icon}</span>}
                   {group.label}
@@ -240,11 +245,16 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
               <button
                 onClick={() => setKillSwitch(!killSwitchActive)}
                 title={killSwitchActive ? 'Kill Switch ON — click to deactivate' : 'Kill Switch OFF — click to activate'}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
-                  killSwitchActive
-                    ? 'bg-red-600 text-white hover:bg-red-500'
-                    : 'border border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
-                }`}
+                className="rounded-full px-2.5 py-1 text-[11px] font-semibold transition"
+                style={killSwitchActive ? {
+                  background: 'var(--danger-text)',
+                  color: '#1A0A0A',
+                  border: '0.5px solid var(--danger-text)',
+                } : {
+                  border: '0.5px solid var(--border)',
+                  background: 'var(--surface)',
+                  color: 'var(--text-tertiary)',
+                }}
               >
                 {killSwitchActive ? '⚡ KILL' : '⚡ Kill'}
               </button>
@@ -256,13 +266,14 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                   onClick={() => setBellOpen((o) => !o)}
                 />
                 {bellOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
+                  <div className="absolute right-0 top-full mt-2 w-80 rounded-xl shadow-xl z-50" style={{ background: 'var(--surface)', border: '0.5px solid var(--border)' }}>
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-                      <span className="text-sm font-semibold text-white">Alerts</span>
+                    <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '0.5px solid var(--border)' }}>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Alerts</span>
                       <button
                         onClick={handleMarkAllRead}
-                        className="text-xs text-zinc-500 hover:text-zinc-300 transition"
+                        className="text-xs transition"
+                        style={{ color: 'var(--text-tertiary)' }}
                       >
                         Mark all read
                       </button>
@@ -270,7 +281,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                     {/* Alert list */}
                     <div className="max-h-80 overflow-y-auto">
                       {latestAlerts.length === 0 ? (
-                        <p className="px-4 py-6 text-center text-xs text-zinc-600">No alerts yet</p>
+                        <p className="px-4 py-6 text-center text-xs" style={{ color: 'var(--text-tertiary)' }}>No alerts yet</p>
                       ) : (
                         latestAlerts.map((alert) => (
                           <button
@@ -280,16 +291,17 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                               setBellOpen(false)
                               setActiveGroup('portfolio', 'action')
                             }}
-                            className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b border-zinc-800/50 hover:bg-zinc-800/30 transition ${!alert.readAt ? 'border-l-2 border-l-indigo-600' : ''}`}
+                            className={`w-full text-left flex items-start gap-3 px-4 py-3 transition ${!alert.readAt ? 'border-l-2' : ''}`}
+                            style={{ borderBottom: '0.5px solid var(--border)', borderLeftColor: !alert.readAt ? 'var(--primary)' : undefined }}
                           >
                             {alert.ticker && (
-                              <span className="mt-0.5 shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300">
+                              <span className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: 'var(--bg)', color: 'var(--text-secondary)' }}>
                                 {alert.ticker}
                               </span>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-zinc-300 leading-snug">{alert.message}</p>
-                              <p className="text-[10px] text-zinc-600 mt-0.5">{timeAgo(alert.createdAt)}</p>
+                              <p className="text-xs leading-snug" style={{ color: 'var(--text-secondary)' }}>{alert.message}</p>
+                              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{timeAgo(alert.createdAt)}</p>
                             </div>
                           </button>
                         ))
@@ -299,10 +311,10 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                 )}
               </div>
 
-              <span className="hidden text-xs text-zinc-600 sm:block max-w-[140px] truncate">{user.email}</span>
+              <span className="hidden text-xs sm:block max-w-[140px] truncate" style={{ color: 'var(--text-tertiary)' }}>{user.email}</span>
               <button
                 onClick={handleSignOut}
-                className="rounded-md px-2.5 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-800 hover:text-white transition"
+                className="btn"
               >
                 Sign out
               </button>
@@ -311,17 +323,20 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
 
           {/* Secondary sub-tab row */}
           {showSubNav && (
-            <div className="flex gap-0.5 overflow-x-auto pb-0 scrollbar-none border-t border-zinc-800/60 pt-1 pb-1">
+            <div className="flex gap-0.5 overflow-x-auto scrollbar-none pt-1 pb-1" style={{ borderTop: '0.5px solid var(--border)' }}>
               {subTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveSubTab(tab.id)}
-                  className={`
-                    whitespace-nowrap rounded px-3 py-1.5 text-xs font-medium transition shrink-0
-                    ${activeSubTab === tab.id
-                      ? 'bg-zinc-800 text-white'
-                      : 'text-zinc-500 hover:text-zinc-300'}
-                  `}
+                  className="whitespace-nowrap rounded px-3 py-1.5 text-xs font-medium transition shrink-0"
+                  style={activeSubTab === tab.id ? {
+                    background: 'rgba(255,255,255,0.10)',
+                    color: '#FFFFFF',
+                    fontWeight: 600,
+                    boxShadow: 'inset 0 -2px 0 #378ADD',
+                  } : {
+                    color: 'rgba(255,255,255,0.55)',
+                  }}
                 >
                   {tab.label}
                 </button>
@@ -354,7 +369,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       )}
 
       {/* Main content */}
-      <main className="mx-auto max-w-screen-xl px-4 py-6">
+      <main className="mx-auto max-w-screen-xl px-4 py-6" style={{ color: 'var(--text-primary)' }}>
         {children}
       </main>
 

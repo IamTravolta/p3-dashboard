@@ -34,6 +34,13 @@ const FACTOR_LABELS: Record<string, string> = {
   s: 'Sentiment',
 }
 
+const inputStyle: React.CSSProperties = {
+  border: '0.5px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text-primary)',
+}
+const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none focus:outline-none transition'
+
 export default function SettingsView() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT)
   const [loading,  setLoading]  = useState(true)
@@ -41,14 +48,13 @@ export default function SettingsView() {
   const [saved,    setSaved]    = useState(false)
   const [toast,    setToast]    = useState<string | null>(null)
 
-  // Railway section state
-  const railwayUrl     = useDashboardStore((s) => s.railwayUrl)
-  const setRailwayUrl  = useDashboardStore((s) => s.setRailwayUrl)
-  const storeSettings  = useDashboardStore((s) => s.settings)
+  const railwayUrl      = useDashboardStore((s) => s.railwayUrl)
+  const setRailwayUrl   = useDashboardStore((s) => s.setRailwayUrl)
+  const storeSettings   = useDashboardStore((s) => s.settings)
   const setStoreSettings = useDashboardStore((s) => s.setSettings)
-  const storeState     = useDashboardStore.getState
+  const storeState      = useDashboardStore.getState
   const paperModeActive = useDashboardStore((s) => s.paperModeActive)
-  const setPaperMode   = useDashboardStore((s) => s.setPaperMode)
+  const setPaperMode    = useDashboardStore((s) => s.setPaperMode)
   const [railwayInput,  setRailwayInput]  = useState(railwayUrl)
   const [railwayStatus, setRailwayStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
   const [importError,   setImportError]   = useState<string | null>(null)
@@ -71,7 +77,6 @@ export default function SettingsView() {
     if (value === 'light') {
       showToast('Light mode coming soon — dark only for now')
     }
-    // Persist preference so ThemeScript can read it on next load
     try { localStorage.setItem('p3-theme', value) } catch {}
   }
 
@@ -142,24 +147,26 @@ export default function SettingsView() {
     e.target.value = ''
   }
 
-  if (loading) return <div className="py-20 text-center text-zinc-500 text-sm">Loading settings…</div>
+  if (loading) return <div className="py-20 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>Loading settings…</div>
 
   return (
     <div className="max-w-2xl space-y-6">
       {/* Toast notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-200 shadow-xl animate-in slide-in-from-bottom-2 duration-200">
+        <div className="fixed bottom-6 right-6 z-50 rounded-lg px-4 py-3 text-sm shadow-xl" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}>
           {toast}
         </div>
       )}
-      <div>
-        <h2 className="text-lg font-semibold text-white">Settings</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">Customise your dashboard behaviour and signal weights</p>
+
+      {/* Header */}
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>⚙️ Settings</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Customise your dashboard behaviour and signal weights</div>
       </div>
 
       {/* Railway Backend */}
       <Section title="Railway Backend">
-        <p className="text-xs text-zinc-500 -mt-2">
+        <p className="text-xs -mt-2" style={{ color: 'var(--text-tertiary)' }}>
           Connect your Railway deployment to enable live signals, backtesting, and enrichment.
         </p>
         <Field label="Railway Backend URL">
@@ -169,27 +176,25 @@ export default function SettingsView() {
               value={railwayInput}
               onChange={(e) => setRailwayInput(e.target.value)}
               placeholder="https://your-project.up.railway.app"
-              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+              className="flex-1 rounded-lg px-3 py-2 text-sm outline-none transition"
+              style={{ ...inputStyle, flex: 1 }}
             />
-            <button
-              onClick={saveRailwayUrl}
-              className="flex items-center gap-1.5 rounded-lg bg-zinc-700 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-600 hover:text-white transition"
-            >
+            <button onClick={saveRailwayUrl} className="btn flex items-center gap-1.5">
               <Save size={12} /> Save
             </button>
             <button
               onClick={testRailwayConnection}
               disabled={railwayStatus === 'testing'}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white disabled:opacity-50 transition"
+              className="btn flex items-center gap-1.5 disabled:opacity-50"
             >
               <Link size={12} />
               {railwayStatus === 'testing' ? 'Testing…' : 'Test'}
             </button>
           </div>
-          {railwayStatus === 'ok'    && <p className="text-xs text-emerald-400 mt-1">✓ CONNECTED</p>}
-          {railwayStatus === 'error' && <p className="text-xs text-red-400 mt-1">✕ ERROR — could not reach backend</p>}
+          {railwayStatus === 'ok'    && <p className="text-xs mt-1" style={{ color: 'var(--success-text)' }}>✓ CONNECTED</p>}
+          {railwayStatus === 'error' && <p className="text-xs mt-1" style={{ color: 'var(--danger-text)' }}>✕ ERROR — could not reach backend</p>}
           {railwayUrl && railwayUrl === railwayInput && (
-            <p className="text-xs text-zinc-600 mt-1">Currently saved: {railwayUrl}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Currently saved: {railwayUrl}</p>
           )}
         </Field>
       </Section>
@@ -200,12 +205,12 @@ export default function SettingsView() {
       {/* Currency */}
       <Section title="Display">
         <Field label="Currency">
-          <select value={settings.currency} onChange={(e) => setSettings((s) => ({ ...s, currency: e.target.value }))} className={SELECT}>
+          <select value={settings.currency} onChange={(e) => setSettings((s) => ({ ...s, currency: e.target.value }))} className={inputClass} style={inputStyle}>
             {['EUR', 'USD', 'GBP'].map((c) => <option key={c}>{c}</option>)}
           </select>
         </Field>
         <Field label="Theme">
-          <select value={settings.theme} onChange={(e) => handleThemeChange(e.target.value)} className={SELECT}>
+          <select value={settings.theme} onChange={(e) => handleThemeChange(e.target.value)} className={inputClass} style={inputStyle}>
             <option value="dark">Dark</option>
             <option value="light">Light</option>
           </select>
@@ -213,19 +218,17 @@ export default function SettingsView() {
         <Field label="Paper Mode">
           <div className="flex items-center justify-between">
             <div className="flex-1 mr-4">
-              <p className="text-xs text-zinc-500">Blocks real money execution reminders</p>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Blocks real money execution reminders</p>
             </div>
             <button
               type="button"
               onClick={() => setPaperMode(!paperModeActive)}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-                paperModeActive ? 'bg-amber-500' : 'bg-zinc-700'
-              }`}
+              className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none"
+              style={{ background: paperModeActive ? 'var(--warning-text)' : 'var(--border)' }}
             >
               <span
-                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-                  paperModeActive ? 'translate-x-4' : 'translate-x-0.5'
-                }`}
+                className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                style={{ transform: paperModeActive ? 'translateX(1rem)' : 'translateX(0.125rem)' }}
               />
             </button>
           </div>
@@ -234,9 +237,9 @@ export default function SettingsView() {
 
       {/* Factor weights */}
       <Section title="Factor weights">
-        <p className="text-xs text-zinc-500 mb-4">
+        <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
           Controls how factor scores (Q/G/V/M/S) are weighted into the composite stock score.
-          Sum: <span className={Math.abs(weightSum - 1) < 0.01 ? 'text-emerald-400' : 'text-red-400'}>
+          Sum: <span style={{ color: Math.abs(weightSum - 1) < 0.01 ? 'var(--success-text)' : 'var(--danger-text)' }}>
             {(weightSum * 100).toFixed(0)}%
           </span> {Math.abs(weightSum - 1) > 0.01 && '(should be 100%)'}
         </p>
@@ -244,8 +247,8 @@ export default function SettingsView() {
           {(Object.keys(settings.factor_weights) as (keyof typeof DEFAULT.factor_weights)[]).map((k) => (
             <div key={k}>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-zinc-300">{FACTOR_LABELS[k]}</span>
-                <span className="text-zinc-400 font-mono">{(settings.factor_weights[k] * 100).toFixed(0)}%</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{FACTOR_LABELS[k]}</span>
+                <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{(settings.factor_weights[k] * 100).toFixed(0)}%</span>
               </div>
               <input
                 type="range"
@@ -274,9 +277,9 @@ export default function SettingsView() {
               onChange={(e) => setSettings((s) => ({ ...s, max_position_pct: parseFloat(e.target.value) }))}
               className="flex-1 accent-indigo-500"
             />
-            <span className="text-sm font-mono text-white w-12">{(settings.max_position_pct * 100).toFixed(0)}%</span>
+            <span className="text-sm font-mono w-12" style={{ color: 'var(--text-primary)' }}>{(settings.max_position_pct * 100).toFixed(0)}%</span>
           </div>
-          <p className="text-xs text-zinc-600 mt-1">Alert when a position exceeds this % of total portfolio</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Alert when a position exceeds this % of total portfolio</p>
         </Field>
       </Section>
 
@@ -286,7 +289,8 @@ export default function SettingsView() {
           <select
             value={settings.briefing_hour}
             onChange={(e) => setSettings((s) => ({ ...s, briefing_hour: parseInt(e.target.value) }))}
-            className={SELECT}
+            className={inputClass}
+            style={inputStyle}
           >
             {Array.from({ length: 24 }, (_, i) => (
               <option key={i} value={i}>{i.toString().padStart(2, '0')}:00</option>
@@ -298,15 +302,15 @@ export default function SettingsView() {
 
       {/* Portfolio Caps */}
       <Section title="Portfolio caps">
-        <p className="text-xs text-zinc-500 -mt-2">
+        <p className="text-xs -mt-2" style={{ color: 'var(--text-tertiary)' }}>
           Maximum allocation limits — saved immediately to your local store.
         </p>
         <div className="space-y-4">
           {(Object.entries(storeSettings.caps) as [keyof typeof storeSettings.caps, number][]).map(([key, val]) => (
             <div key={key}>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-zinc-300">{CAP_LABELS[key] ?? key}</span>
-                <span className="text-zinc-400 font-mono">{val}%</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{CAP_LABELS[key] ?? key}</span>
+                <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{val}%</span>
               </div>
               <div className="flex items-center gap-3">
                 <input
@@ -328,9 +332,10 @@ export default function SettingsView() {
                   onChange={(e) =>
                     setStoreSettings({ caps: { ...storeSettings.caps, [key]: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) } })
                   }
-                  className="w-16 rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-white text-right tabular-nums outline-none focus:border-indigo-500 transition"
+                  className="w-16 rounded-lg px-2 py-1 text-xs text-right tabular-nums outline-none transition"
+                  style={inputStyle}
                 />
-                <span className="text-xs text-zinc-500">%</span>
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>%</span>
               </div>
             </div>
           ))}
@@ -339,38 +344,23 @@ export default function SettingsView() {
 
       {/* Import / Export */}
       <Section title="Import / Export">
-        <p className="text-xs text-zinc-500 -mt-2">
+        <p className="text-xs -mt-2" style={{ color: 'var(--text-tertiary)' }}>
           Export your portfolio, watchlist, and settings as a JSON backup file.
         </p>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={exportData}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition"
-          >
+          <button onClick={exportData} className="btn flex items-center gap-2">
             <Download size={13} /> Export Data
           </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition"
-          >
+          <button onClick={() => fileInputRef.current?.click()} className="btn flex items-center gap-2">
             <Upload size={13} /> Import Backup
           </button>
-          <a
-            href="/migrate"
-            className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition"
-          >
+          <a href="/migrate" className="btn flex items-center gap-2">
             Import from Legacy Dashboard
           </a>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleImportFile}
-          className="hidden"
-        />
-        {importError && <p className="text-xs text-red-400">{importError}</p>}
-        <p className="text-xs text-zinc-600">
+        <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportFile} className="hidden" />
+        {importError && <p className="text-xs" style={{ color: 'var(--danger-text)' }}>{importError}</p>}
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           Exports include positions, watchlist, settings, and Railway URL. Prices and signal cache are excluded.
         </p>
       </Section>
@@ -380,14 +370,14 @@ export default function SettingsView() {
         <button
           onClick={save}
           disabled={saving || Math.abs(weightSum - 1) > 0.01}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition"
+          className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
         >
           {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? 'Saving…' : 'Save settings'}
         </button>
-        {saved && <span className="text-sm text-emerald-400">✓ Saved</span>}
+        {saved && <span className="text-sm" style={{ color: 'var(--success-text)' }}>✓ Saved</span>}
         {Math.abs(weightSum - 1) > 0.01 && (
-          <span className="text-xs text-red-400">Factor weights must sum to 100%</span>
+          <span className="text-xs" style={{ color: 'var(--danger-text)' }}>Factor weights must sum to 100%</span>
         )}
       </div>
     </div>
@@ -419,7 +409,7 @@ function GenerateBriefingButton() {
       <button
         onClick={generate}
         disabled={status === 'loading'}
-        className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white disabled:opacity-50 transition"
+        className="btn flex items-center gap-2 disabled:opacity-50"
       >
         {status === 'loading' ? (
           <>
@@ -432,13 +422,13 @@ function GenerateBriefingButton() {
       </button>
 
       {status === 'done' && (
-        <p className="text-xs text-emerald-400">
+        <p className="text-xs" style={{ color: 'var(--success-text)' }}>
           Done!{' '}
           <button
             onClick={() => {
               useDashboardStore.getState().setActiveGroup('briefing', 'briefing')
             }}
-            className="underline hover:text-emerald-300 transition"
+            className="underline"
           >
             Go to Briefing tab
           </button>
@@ -446,7 +436,7 @@ function GenerateBriefingButton() {
       )}
 
       {status === 'error' && (
-        <p className="text-xs text-red-400">{errMsg ?? 'Generation failed'}</p>
+        <p className="text-xs" style={{ color: 'var(--danger-text)' }}>{errMsg ?? 'Generation failed'}</p>
       )}
     </div>
   )
@@ -471,6 +461,13 @@ function LinkedEmailsSection() {
   const [saving,  setSaving]  = useState(false)
   const [err,     setErr]     = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const inputStyle: React.CSSProperties = {
+    border: '0.5px solid var(--border)',
+    background: 'var(--bg)',
+    color: 'var(--text-primary)',
+  }
+  const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition'
 
   useEffect(() => {
     fetch('/api/settings/emails')
@@ -509,39 +506,40 @@ function LinkedEmailsSection() {
 
   return (
     <Section title="Login emails">
-      <p className="text-xs text-zinc-500 -mt-2">
+      <p className="text-xs -mt-2" style={{ color: 'var(--text-tertiary)' }}>
         Add extra email addresses you can use to log in. When you enter a linked email
         at the login screen, the one-time code is sent to your primary email.
       </p>
 
       {loading ? (
-        <p className="text-xs text-zinc-600">Loading…</p>
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Loading…</p>
       ) : (
         <div className="space-y-2">
           {/* Primary email */}
-          <div className="flex items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2.5">
-            <Mail size={13} className="text-indigo-400 shrink-0" />
+          <div className="flex items-center gap-3 rounded-lg px-3 py-2.5" style={{ border: '0.5px solid var(--border)', background: 'var(--bg)' }}>
+            <Mail size={13} className="shrink-0" style={{ color: 'var(--primary)' }} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate">{primary}</p>
-              <p className="text-[10px] text-zinc-500">Primary — OTP codes always go here</p>
+              <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{primary}</p>
+              <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>Primary — OTP codes always go here</p>
             </div>
-            <span className="shrink-0 rounded-full bg-indigo-600/20 border border-indigo-600/40 px-2 py-0.5 text-[10px] font-semibold text-indigo-400">
+            <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'var(--info-bg)', border: '1px solid var(--info-text)', color: 'var(--info-text)' }}>
               PRIMARY
             </span>
           </div>
 
           {/* Linked emails */}
           {linked.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-              <Mail size={13} className="text-zinc-500 shrink-0" />
+            <div key={item.id} className="flex items-center gap-3 rounded-lg px-3 py-2.5" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}>
+              <Mail size={13} className="shrink-0" style={{ color: 'var(--text-tertiary)' }} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-zinc-200 truncate">{item.email}</p>
-                {item.label && <p className="text-[10px] text-zinc-500">{item.label}</p>}
+                <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{item.email}</p>
+                {item.label && <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{item.label}</p>}
               </div>
               <button
                 onClick={() => handleDelete(item.id)}
                 disabled={deletingId === item.id}
-                className="shrink-0 rounded p-1 text-zinc-600 hover:text-red-400 hover:bg-red-900/20 disabled:opacity-40 transition"
+                className="shrink-0 rounded p-1 transition disabled:opacity-40"
+                style={{ color: 'var(--text-tertiary)' }}
                 title="Remove"
               >
                 <Trash2 size={13} />
@@ -551,7 +549,7 @@ function LinkedEmailsSection() {
 
           {/* Add form */}
           {adding ? (
-            <form onSubmit={handleAdd} className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 space-y-3">
+            <form onSubmit={handleAdd} className="rounded-lg p-3 space-y-3" style={{ border: '0.5px solid var(--border)', background: 'var(--bg)' }}>
               <div className="space-y-2">
                 <input
                   type="email"
@@ -560,22 +558,24 @@ function LinkedEmailsSection() {
                   placeholder="new@example.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                  className={inputClass}
+                  style={inputStyle}
                 />
                 <input
                   type="text"
                   placeholder="Label (optional — e.g. Work, Personal)"
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                  className={inputClass}
+                  style={inputStyle}
                 />
               </div>
-              {err && <p className="text-xs text-red-400">{err}</p>}
+              {err && <p className="text-xs" style={{ color: 'var(--danger-text)' }}>{err}</p>}
               <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={saving || !newEmail}
-                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition"
+                  className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {saving ? <RefreshCw size={11} className="animate-spin" /> : <Plus size={11} />}
                   {saving ? 'Adding…' : 'Add email'}
@@ -583,7 +583,7 @@ function LinkedEmailsSection() {
                 <button
                   type="button"
                   onClick={() => { setAdding(false); setNewEmail(''); setNewLabel(''); setErr(null) }}
-                  className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                  className="btn"
                 >
                   Cancel
                 </button>
@@ -592,7 +592,8 @@ function LinkedEmailsSection() {
           ) : (
             <button
               onClick={() => setAdding(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-700 border-dashed bg-transparent px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition w-full"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs transition w-full"
+              style={{ border: '1px dashed var(--border)', color: 'var(--text-tertiary)', background: 'transparent' }}
             >
               <Plus size={12} /> Add login email
             </button>
@@ -606,8 +607,8 @@ function LinkedEmailsSection() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-4">
-      <h3 className="text-sm font-medium text-zinc-300 border-b border-zinc-800 pb-2">{title}</h3>
+    <div className="surface p-5 space-y-4">
+      <h3 className="text-sm font-medium pb-2" style={{ color: 'var(--text-primary)', borderBottom: '0.5px solid var(--border)' }}>{title}</h3>
       {children}
     </div>
   )
@@ -616,13 +617,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-medium text-zinc-400">{label}</label>
+      <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</label>
       {children}
     </div>
   )
 }
-
-const SELECT = 'w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition'
 
 const CAP_LABELS: Record<string, string> = {
   singleName: 'Single name',

@@ -99,7 +99,6 @@ export default function WatchlistView() {
         setSignalResults((r) => ({ ...r, [item.ticker]: { error: data.error! } }))
       } else {
         setSignalResults((r) => ({ ...r, [item.ticker]: data }))
-        // Persist result in store cache so it survives tab switches
         setSignalCache(item.ticker, {
           signals:    (data.signals ?? []).reduce<Record<string, unknown>>((acc, sig, i) => {
             acc[sig.module_name ?? `signal_${i}`] = sig
@@ -130,26 +129,21 @@ export default function WatchlistView() {
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-white">
-            Watchlist
-          </h2>
-          <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Watchlist</h2>
+          <span className="rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--surface)', color: 'var(--text-secondary)' }}>
             {watchlist.length}
           </span>
           {!railwayUrl && (
-            <span className="text-xs text-zinc-600">· Connect Railway in Settings for live signals</span>
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>· Connect Railway in Settings for live signals</span>
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => loadWatchlist()}
-            className="rounded-md px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
-          >
+          <button onClick={() => loadWatchlist()} className="btn rounded-md px-3 py-1.5 text-xs">
             ↻ Refresh
           </button>
           <button
             onClick={() => { setEditTarget(undefined); setModalOpen(true) }}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition"
+            className="btn btn-primary rounded-md px-3 py-1.5 text-xs font-semibold"
           >
             + Add ticker
           </button>
@@ -159,19 +153,16 @@ export default function WatchlistView() {
       {watchlist.length === 0 ? (
         <EmptyState onAdd={() => setModalOpen(true)} />
       ) : (
-        <div className="rounded-xl border border-zinc-800 overflow-hidden">
+        <div className="surface overflow-hidden">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_80px_80px_64px_90px_auto] gap-x-2 border-b border-zinc-800 bg-zinc-950 px-4 py-2">
-            <span className="text-xs text-zinc-600 font-medium">Ticker</span>
-            <span className="text-xs text-zinc-600 font-medium text-right">Price</span>
-            <span className="text-xs text-zinc-600 font-medium text-right">Target</span>
-            <span className="text-xs text-zinc-600 font-medium text-right">Score</span>
-            <span className="text-xs text-zinc-600 font-medium text-right">Conv.</span>
-            <span className="text-xs text-zinc-600 font-medium text-right pr-2">Actions</span>
+          <div className="grid grid-cols-[1fr_80px_80px_64px_90px_auto] gap-x-2 px-4 py-2" style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg)' }}>
+            {['Ticker', 'Price', 'Target', 'Score', 'Conv.', 'Actions'].map((h, i) => (
+              <span key={h} className={`text-xs font-medium ${i > 0 && i < 5 ? 'text-right' : i === 5 ? 'text-right pr-2' : ''}`} style={{ color: 'var(--text-tertiary)' }}>{h}</span>
+            ))}
           </div>
 
           {/* Rows */}
-          <div className="divide-y divide-zinc-800/70">
+          <div>
             {sorted.map((item) => {
               const livePrice      = prices[item.ticker] ?? item.currentPrice
               const priceTriggered = item.priceTrigger != null && livePrice <= item.priceTrigger
@@ -182,40 +173,37 @@ export default function WatchlistView() {
               const result         = signalResults[item.ticker]
 
               const scoreColor = item.score >= 7
-                ? 'text-emerald-400'
+                ? 'var(--success-text)'
                 : item.score >= 5
-                ? 'text-yellow-400'
-                : 'text-zinc-400'
+                ? 'var(--yellow-text)'
+                : 'var(--text-secondary)'
 
               return (
-                <div key={item.id} className={isExpired ? 'opacity-50' : ''}>
+                <div key={item.id} style={{ opacity: isExpired ? 0.5 : 1, borderBottom: '0.5px solid var(--border)' }}>
                   {/* Main row */}
                   <div
-                    className={`
-                      group grid grid-cols-[1fr_80px_80px_64px_90px_auto] gap-x-2 items-center
-                      px-4 py-3 cursor-pointer transition
-                      ${triggered ? 'bg-emerald-950/20 hover:bg-emerald-950/30' : 'hover:bg-zinc-800/40'}
-                    `}
+                    className="group grid grid-cols-[1fr_80px_80px_64px_90px_auto] gap-x-2 items-center px-4 py-3 cursor-pointer transition"
+                    style={triggered ? { background: 'rgba(125,216,159,0.04)' } : {}}
                     onClick={() => toggleExpand(item.id)}
                   >
                     {/* Ticker + name */}
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-xs text-zinc-600 w-3 shrink-0">{isOpen ? '▾' : '▸'}</span>
+                      <span className="text-xs w-3 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{isOpen ? '▾' : '▸'}</span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono font-bold text-white text-sm">{item.ticker}</span>
+                          <span className="font-mono font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{item.ticker}</span>
                           {item.score >= 7 && (
-                            <span className="text-[10px] bg-emerald-900/40 text-emerald-400 border border-emerald-800/60 rounded px-1.5 py-px font-semibold leading-none">
+                            <span className="text-[10px] rounded px-1.5 py-px font-semibold leading-none" style={{ background: 'var(--success-bg)', color: 'var(--success-text)', border: '1px solid var(--success-text)' }}>
                               KLAAR
                             </span>
                           )}
                           {triggered && (
-                            <span className="text-[10px] bg-emerald-900/50 text-emerald-300 rounded px-1.5 py-px font-medium leading-none">
+                            <span className="text-[10px] rounded px-1.5 py-px font-medium leading-none" style={{ background: 'var(--success-bg)', color: 'var(--success-text)' }}>
                               🔔
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 truncate leading-tight mt-0.5">
+                        <p className="text-xs truncate leading-tight mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                           {item.name || item.exchange}
                         </p>
                       </div>
@@ -223,24 +211,24 @@ export default function WatchlistView() {
 
                     {/* Live price */}
                     <div className="text-right">
-                      <p className={`text-sm font-semibold tabular-nums ${priceTriggered ? 'text-emerald-400' : 'text-zinc-200'}`}>
+                      <p className="text-sm font-semibold tabular-nums" style={{ color: priceTriggered ? 'var(--success-text)' : 'var(--text-primary)' }}>
                         {livePrice > 0 ? `€${livePrice.toFixed(2)}` : '—'}
                       </p>
                       {prices[item.ticker] && (
-                        <p className="text-[10px] text-zinc-600 leading-none">live</p>
+                        <p className="text-[10px] leading-none" style={{ color: 'var(--text-tertiary)' }}>live</p>
                       )}
                     </div>
 
                     {/* Price trigger */}
                     <div className="text-right">
-                      <p className={`text-sm tabular-nums ${priceTriggered ? 'text-emerald-400 font-semibold' : 'text-zinc-500'}`}>
+                      <p className="text-sm tabular-nums" style={{ color: priceTriggered ? 'var(--success-text)' : 'var(--text-tertiary)', fontWeight: priceTriggered ? 600 : 400 }}>
                         {item.priceTrigger != null ? `€${item.priceTrigger.toFixed(2)}` : '—'}
                       </p>
                     </div>
 
                     {/* Score */}
                     <div className="text-right">
-                      <p className={`text-sm font-semibold tabular-nums ${scoreColor}`}>
+                      <p className="text-sm font-semibold tabular-nums" style={{ color: scoreColor }}>
                         {item.score > 0 ? item.score.toFixed(1) : '—'}
                       </p>
                     </div>
@@ -255,13 +243,15 @@ export default function WatchlistView() {
                       <button
                         onClick={() => runAnalysis(item)}
                         disabled={analyzing === item.ticker}
-                        className="rounded px-2 py-1 text-[11px] font-medium text-indigo-400 hover:bg-indigo-900/30 disabled:opacity-40 transition whitespace-nowrap"
+                        className="rounded px-2 py-1 text-[11px] font-medium transition disabled:opacity-40 whitespace-nowrap"
+                        style={{ color: 'var(--primary)' }}
                       >
                         {analyzing === item.ticker ? 'Running…' : 'Analyse'}
                       </button>
                       <button
                         onClick={() => openEdit(item)}
-                        className="rounded px-2 py-1 text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-zinc-700/60 transition"
+                        className="rounded px-2 py-1 text-[11px] font-medium transition"
+                        style={{ color: 'var(--text-secondary)' }}
                       >
                         Edit
                       </button>
@@ -269,14 +259,16 @@ export default function WatchlistView() {
                         <button
                           onClick={() => handleDelete(item.id)}
                           disabled={deleting}
-                          className="rounded px-2 py-1 text-[11px] font-medium bg-red-900/50 text-red-300 hover:bg-red-800 transition"
+                          className="rounded px-2 py-1 text-[11px] font-medium transition"
+                          style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)' }}
                         >
                           {deleting ? '…' : 'Sure?'}
                         </button>
                       ) : (
                         <button
                           onClick={() => setDeleteConfirm(item.id)}
-                          className="rounded px-2 py-1 text-[11px] font-medium text-zinc-600 hover:text-red-400 hover:bg-red-900/20 transition"
+                          className="rounded px-2 py-1 text-[11px] font-medium transition"
+                          style={{ color: 'var(--text-tertiary)' }}
                         >
                           Remove
                         </button>
@@ -286,27 +278,24 @@ export default function WatchlistView() {
 
                   {/* Expanded detail panel */}
                   {isOpen && (
-                    <div className="border-t border-zinc-800/60 bg-zinc-900/30 px-4 sm:px-6 py-4 space-y-4">
+                    <div className="px-4 sm:px-6 py-4 space-y-4" style={{ borderTop: '0.5px solid var(--border)', background: 'var(--bg)' }}>
 
                       {/* Thesis */}
                       {item.reason && (
-                        <p className="text-xs text-zinc-300 leading-relaxed border-l-2 border-indigo-700 pl-3">
+                        <p className="text-xs leading-relaxed pl-3" style={{ color: 'var(--text-primary)', borderLeft: '2px solid var(--primary)' }}>
                           {item.reason}
                         </p>
                       )}
 
-                      {/* Two-column layout: factors left, metadata right */}
+                      {/* Two-column layout */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                        {/* Factor scores — horizontal bars */}
                         <div className="space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Factor scores</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Factor scores</p>
                           <FactorBar scores={item.factorScores} />
                         </div>
 
-                        {/* Metadata pills */}
                         <div className="space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Details</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>Details</p>
                           <div className="flex flex-wrap gap-2">
                             {item.sector && <MetaPill label="Sector" value={item.sector} />}
                             {item.exchange && <MetaPill label="Exchange" value={item.exchange} />}
@@ -328,7 +317,8 @@ export default function WatchlistView() {
                       {!result && !analyzing && (
                         <button
                           onClick={() => runAnalysis(item)}
-                          className="w-full sm:w-auto rounded-lg border border-indigo-800/60 bg-indigo-900/30 px-4 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-800/50 transition"
+                          className="btn w-full sm:w-auto"
+                          style={{ border: '1px solid var(--primary)', color: 'var(--primary)' }}
                         >
                           Run signal analysis
                         </button>
@@ -336,8 +326,8 @@ export default function WatchlistView() {
 
                       {/* Running indicator */}
                       {analyzing === item.ticker && (
-                        <div className="flex items-center gap-2 text-xs text-zinc-500">
-                          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
                           Running analysis…
                         </div>
                       )}
@@ -417,14 +407,16 @@ interface SignalResult {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function ConvictionBadge({ level }: { level: number }) {
-  const config =
-    level >= 5 ? { label: 'Max',  cls: 'text-emerald-400 bg-emerald-900/30 border-emerald-800/50' } :
-    level >= 4 ? { label: 'High', cls: 'text-indigo-400  bg-indigo-900/30  border-indigo-800/50'  } :
-    level >= 3 ? { label: 'Med',  cls: 'text-yellow-400  bg-yellow-900/30  border-yellow-800/50'  } :
-                 { label: 'Low',  cls: 'text-zinc-400    bg-zinc-800/60    border-zinc-700/50'    }
+  const style: React.CSSProperties =
+    level >= 5 ? { color: 'var(--success-text)', background: 'var(--success-bg)', border: '1px solid var(--success-text)' } :
+    level >= 4 ? { color: 'var(--info-text)', background: 'var(--info-bg)', border: '1px solid var(--info-text)' } :
+    level >= 3 ? { color: 'var(--yellow-text)', background: 'var(--yellow-bg)', border: '1px solid var(--yellow-text)' } :
+                 { color: 'var(--text-secondary)', background: 'var(--surface)', border: '1px solid var(--border)' }
+  const label =
+    level >= 5 ? 'Max' : level >= 4 ? 'High' : level >= 3 ? 'Med' : 'Low'
   return (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${config.cls}`}>
-      {config.label}
+    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={style}>
+      {label}
     </span>
   )
 }
@@ -436,14 +428,14 @@ function FactorBar({ scores }: { scores: FactorScores }) {
       {(Object.keys(labels) as (keyof FactorScores)[]).map((k) => {
         const val   = scores[k] ?? 0
         const pct   = Math.min((val / 10) * 100, 100)
-        const color = val >= 7 ? 'bg-emerald-500' : val >= 5 ? 'bg-yellow-500' : val > 0 ? 'bg-red-400' : 'bg-zinc-700'
+        const color = val >= 7 ? 'var(--success-text)' : val >= 5 ? 'var(--yellow-text)' : val > 0 ? 'var(--danger-text)' : 'var(--text-tertiary)'
         return (
           <div key={k} className="flex items-center gap-2">
-            <span className="text-[10px] text-zinc-500 w-16 shrink-0">{labels[k]}</span>
-            <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+            <span className="text-[10px] w-16 shrink-0" style={{ color: 'var(--text-tertiary)' }}>{labels[k]}</span>
+            <div className="progress-track flex-1">
+              <div className="progress-fill rounded-full" style={{ width: `${pct}%`, background: color }} />
             </div>
-            <span className="text-[10px] tabular-nums text-zinc-400 w-5 text-right">{val > 0 ? val.toFixed(0) : '—'}</span>
+            <span className="text-[10px] tabular-nums w-5 text-right" style={{ color: 'var(--text-secondary)' }}>{val > 0 ? val.toFixed(0) : '—'}</span>
           </div>
         )
       })}
@@ -454,11 +446,11 @@ function FactorBar({ scores }: { scores: FactorScores }) {
 function MetaPill({ label, value, highlight }: {
   label: string; value: string; highlight?: 'red' | 'green'
 }) {
-  const valueClass = highlight === 'red' ? 'text-red-400' : highlight === 'green' ? 'text-emerald-400' : 'text-zinc-200'
+  const valueColor = highlight === 'red' ? 'var(--danger-text)' : highlight === 'green' ? 'var(--success-text)' : 'var(--text-primary)'
   return (
-    <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1">
-      <span className="text-[10px] text-zinc-600">{label}</span>
-      <span className={`text-[10px] font-semibold ${valueClass}`}>{value}</span>
+    <div className="flex items-center gap-1 rounded-md px-2.5 py-1" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}>
+      <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{label}</span>
+      <span className="text-[10px] font-semibold" style={{ color: valueColor }}>{value}</span>
     </div>
   )
 }
@@ -466,7 +458,7 @@ function MetaPill({ label, value, highlight }: {
 function SignalResultPanel({ result }: { result: SignalResult }) {
   if (result.error) {
     return (
-      <div className="rounded-lg bg-red-900/20 border border-red-800 px-3 py-2 text-xs text-red-400">
+      <div className="rounded-lg px-3 py-2 text-xs" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
         ⚠ {result.error}
       </div>
     )
@@ -479,36 +471,33 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
   const m            = result.macro
   const ins          = result.insider
 
-  const verdictColor = verdictLabel === 'BUY'
-    ? 'text-emerald-400 bg-emerald-900/30 border-emerald-800'
+  const verdictStyle: React.CSSProperties = verdictLabel === 'BUY'
+    ? { color: 'var(--success-text)', background: 'var(--success-bg)', border: '1px solid var(--success-text)' }
     : verdictLabel === 'SELL'
-    ? 'text-red-400 bg-red-900/30 border-red-800'
-    : 'text-yellow-400 bg-yellow-900/30 border-yellow-800'
+    ? { color: 'var(--danger-text)', background: 'var(--danger-bg)', border: '1px solid var(--danger-text)' }
+    : { color: 'var(--yellow-text)', background: 'var(--yellow-bg)', border: '1px solid var(--yellow-text)' }
 
-  const macroColor: Record<string, string> = {
-    'risk-on':  'text-emerald-400 bg-emerald-900/20 border-emerald-800/50',
-    'cautious': 'text-yellow-400 bg-yellow-900/20 border-yellow-800/50',
-    'risk-off': 'text-orange-400 bg-orange-900/20 border-orange-800/50',
-    'crisis':   'text-red-400 bg-red-900/20 border-red-800/50',
+  function macroStyle(regime: string | undefined): React.CSSProperties {
+    if (regime === 'risk-on')  return { color: 'var(--success-text)', background: 'var(--success-bg)', border: '1px solid var(--success-text)' }
+    if (regime === 'cautious') return { color: 'var(--yellow-text)', background: 'var(--yellow-bg)', border: '1px solid var(--yellow-text)' }
+    if (regime === 'risk-off') return { color: 'var(--warning-text)', background: 'var(--warning-bg)', border: '1px solid var(--warning-text)' }
+    if (regime === 'crisis')   return { color: 'var(--danger-text)', background: 'var(--danger-bg)', border: '1px solid var(--danger-text)' }
+    return { color: 'var(--text-secondary)', background: 'var(--surface)', border: '1px solid var(--border)' }
   }
-  const regimeClass = macroColor[m?.regime ?? ''] ?? 'text-zinc-400 bg-zinc-800/50 border-zinc-700'
 
-  const insiderColor: Record<string, string> = {
-    'strong-buy': 'text-emerald-400 bg-emerald-900/20 border-emerald-800/50',
-    'buy':        'text-emerald-400 bg-emerald-900/20 border-emerald-800/50',
-    'neutral':    'text-zinc-400 bg-zinc-800/50 border-zinc-700',
-    'sell':       'text-red-400 bg-red-900/20 border-red-800/50',
-    'unknown':    'text-zinc-500 bg-zinc-800/30 border-zinc-800',
+  function insiderStyle(signal: string | undefined): React.CSSProperties {
+    if (signal === 'strong-buy' || signal === 'buy') return { color: 'var(--success-text)', background: 'var(--success-bg)', border: '1px solid var(--success-text)' }
+    if (signal === 'sell') return { color: 'var(--danger-text)', background: 'var(--danger-bg)', border: '1px solid var(--danger-text)' }
+    return { color: 'var(--text-secondary)', background: 'var(--surface)', border: '1px solid var(--border)' }
   }
-  const insiderClass = insiderColor[ins?.netBuySignal ?? 'unknown'] ?? insiderColor.unknown
 
   return (
-    <div className="space-y-3 border-t border-zinc-800 pt-3">
+    <div className="space-y-3 pt-3" style={{ borderTop: '0.5px solid var(--border)' }}>
 
-      {/* ── Verdict row ── */}
+      {/* Verdict row */}
       {verdict && (
         <div className="flex items-center gap-2 flex-wrap">
-          <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold ${verdictColor}`}>
+          <div className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold" style={verdictStyle}>
             {verdictLabel}
             <span className="text-xs font-normal opacity-75">{(verdict.confidence * 100).toFixed(0)}% conf</span>
             {verdict.score != null && (
@@ -516,96 +505,71 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
             )}
           </div>
 
-          {/* Macro regime badge */}
           {m?.regime && (
-            <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold ${regimeClass}`}>
+            <span className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-semibold" style={macroStyle(m.regime)}>
               Macro: {m.regime}
             </span>
           )}
 
-          {/* Insider badge */}
           {ins?.netBuySignal && ins.netBuySignal !== 'unknown' && (
-            <span className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-semibold ${insiderClass}`}>
+            <span className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-semibold" style={insiderStyle(ins.netBuySignal)}>
               Insider: {ins.netBuySignal.replace('-', ' ')}
             </span>
           )}
 
-          {/* Earnings warning */}
           {verdict.earningsWarning && (
-            <span className="inline-flex items-center rounded-md border border-amber-700/50 bg-amber-900/20 px-2 py-1 text-[10px] font-semibold text-amber-400">
+            <span className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-semibold" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
               ⚠ Earnings {f?.daysToEarnings != null ? `in ${f.daysToEarnings}d` : 'soon'}
             </span>
           )}
 
-          {/* Speculation score */}
           {result.speculation && (
-            <span className="inline-flex items-center gap-1 rounded-md border border-amber-800/50 bg-amber-900/20 px-2 py-1 text-[10px] font-semibold text-amber-300">
+            <span className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold" style={{ border: '1px solid var(--yellow-text)', background: 'var(--yellow-bg)', color: 'var(--yellow-text)' }}>
               Spec: {result.speculation.score}/10 · {result.speculation.label}
             </span>
           )}
         </div>
       )}
 
-      {/* ── Reasoning ── */}
+      {/* Reasoning */}
       {verdict?.reasoning && (
-        <p className="text-xs text-zinc-400 leading-relaxed line-clamp-4">{verdict.reasoning}</p>
+        <p className="text-xs leading-relaxed line-clamp-4" style={{ color: 'var(--text-secondary)' }}>{verdict.reasoning}</p>
       )}
 
-      {/* ── Fundamentals strip ── */}
+      {/* Fundamentals strip */}
       {f && (
         <div className="flex flex-wrap gap-1.5">
-          {f.peRatio != null && (
-            <MetaPill label="P/E" value={`${f.peRatio.toFixed(1)}×`} />
-          )}
-          {f.evToEbitda != null && (
-            <MetaPill label="EV/EBITDA" value={`${f.evToEbitda.toFixed(1)}×`} />
-          )}
-          {f.revenueGrowthYoY != null && (
-            <MetaPill
-              label="Rev growth"
-              value={`${(f.revenueGrowthYoY * 100).toFixed(1)}%`}
-              highlight={f.revenueGrowthYoY > 0 ? 'green' : 'red'}
-            />
-          )}
-          {f.netMargin != null && (
-            <MetaPill label="Net margin" value={`${(f.netMargin * 100).toFixed(1)}%`} />
-          )}
-          {f.analystConsensus && (
-            <MetaPill label="Analyst" value={f.analystConsensus} />
-          )}
-          {f.analystTarget != null && (
-            <MetaPill label="Target" value={`$${f.analystTarget.toFixed(0)}`} highlight="green" />
-          )}
+          {f.peRatio != null && <MetaPill label="P/E" value={`${f.peRatio.toFixed(1)}×`} />}
+          {f.evToEbitda != null && <MetaPill label="EV/EBITDA" value={`${f.evToEbitda.toFixed(1)}×`} />}
+          {f.revenueGrowthYoY != null && <MetaPill label="Rev growth" value={`${(f.revenueGrowthYoY * 100).toFixed(1)}%`} highlight={f.revenueGrowthYoY > 0 ? 'green' : 'red'} />}
+          {f.netMargin != null && <MetaPill label="Net margin" value={`${(f.netMargin * 100).toFixed(1)}%`} />}
+          {f.analystConsensus && <MetaPill label="Analyst" value={f.analystConsensus} />}
+          {f.analystTarget != null && <MetaPill label="Target" value={`$${f.analystTarget.toFixed(0)}`} highlight="green" />}
           {f.estimateRevisions && (
             <MetaPill
               label="Estimates"
-              value={`↑ ${f.estimateRevisions}` .replace('↑ up', '↑ rising').replace('↑ down', '↓ falling').replace('↑ flat', '→ flat')}
+              value={`↑ ${f.estimateRevisions}`.replace('↑ up', '↑ rising').replace('↑ down', '↓ falling').replace('↑ flat', '→ flat')}
               highlight={f.estimateRevisions === 'up' ? 'green' : f.estimateRevisions === 'down' ? 'red' : undefined}
             />
           )}
           {f.daysToEarnings != null && (
-            <MetaPill
-              label="Earnings"
-              value={`${f.daysToEarnings}d`}
-              highlight={f.daysToEarnings <= 7 ? 'red' : f.daysToEarnings <= 14 ? 'red' : undefined}
-            />
+            <MetaPill label="Earnings" value={`${f.daysToEarnings}d`} highlight={f.daysToEarnings <= 14 ? 'red' : undefined} />
           )}
         </div>
       )}
 
-      {/* ── Earnings surprise history ── */}
+      {/* Earnings surprise history */}
       {f?.surpriseHistory && f.surpriseHistory.length > 0 && (
         <div>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wide mb-1.5">Earnings history</p>
+          <p className="text-[10px] uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Earnings history</p>
           <div className="flex gap-1.5 flex-wrap">
             {f.surpriseHistory.map((s) => (
               <div
                 key={s.date}
-                className={`rounded px-2 py-1 text-[10px] font-semibold border ${
-                  s.beat
-                    ? 'text-emerald-400 bg-emerald-900/20 border-emerald-800/50'
-                    : 'text-red-400 bg-red-900/20 border-red-800/50'
-                }`}
+                className="rounded px-2 py-1 text-[10px] font-semibold"
+                style={s.beat
+                  ? { color: 'var(--success-text)', background: 'var(--success-bg)', border: '1px solid var(--success-text)' }
+                  : { color: 'var(--danger-text)', background: 'var(--danger-bg)', border: '1px solid var(--danger-text)' }}
               >
                 {s.date.slice(0, 7)} {s.beat ? '▲' : '▼'} {s.beat ? '+' : ''}{s.epsMiss.toFixed(2)}
               </div>
@@ -614,47 +578,44 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
         </div>
       )}
 
-      {/* ── Macro detail ── */}
+      {/* Macro detail */}
       {m && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 space-y-1">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Macro context</p>
-          <p className="text-xs text-zinc-400">{m.regimeSummary}</p>
+        <div className="rounded-lg px-3 py-2 space-y-1" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}>
+          <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>Macro context</p>
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{m.regimeSummary}</p>
         </div>
       )}
 
-      {/* ── Insider detail ── */}
+      {/* Insider detail */}
       {ins && ins.transactions && ins.transactions.length > 0 && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 space-y-1.5">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Insider activity (90 days)</p>
+        <div className="rounded-lg px-3 py-2 space-y-1.5" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}>
+          <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>Insider activity (90 days)</p>
           {ins.transactions.slice(0, 3).map((t, i) => (
             <div key={i} className="flex items-center justify-between text-[10px]">
-              <span className={`font-semibold ${t.transactionType === 'buy' ? 'text-emerald-400' : t.transactionType === 'sell' ? 'text-red-400' : 'text-zinc-400'}`}>
+              <span className="font-semibold" style={{ color: t.transactionType === 'buy' ? 'var(--success-text)' : t.transactionType === 'sell' ? 'var(--danger-text)' : 'var(--text-secondary)' }}>
                 {t.transactionType.toUpperCase()}
               </span>
-              <span className="text-zinc-400 truncate mx-2 max-w-[120px]">{t.insiderName}</span>
-              <span className="text-zinc-500">{t.shares.toLocaleString()} shs</span>
+              <span className="truncate mx-2 max-w-[120px]" style={{ color: 'var(--text-secondary)' }}>{t.insiderName}</span>
+              <span style={{ color: 'var(--text-secondary)' }}>{t.shares.toLocaleString()} shs</span>
               {t.totalValue != null && (
-                <span className="text-zinc-500 ml-2">${(t.totalValue / 1000).toFixed(0)}k</span>
+                <span className="ml-2" style={{ color: 'var(--text-tertiary)' }}>${(t.totalValue / 1000).toFixed(0)}k</span>
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Signal modules ── */}
+      {/* Signal modules */}
       {signalList.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {signalList.map((sig, i) => (
-            <div key={i} className="rounded-lg bg-zinc-800/50 px-2.5 py-2">
-              <p className="text-[10px] text-zinc-500 capitalize leading-none">
+            <div key={i} className="rounded-lg px-2.5 py-2" style={{ background: 'var(--surface)' }}>
+              <p className="text-[10px] capitalize leading-none" style={{ color: 'var(--text-tertiary)' }}>
                 {(sig.module_name ?? `Signal ${i + 1}`).replace(/_/g, ' ')}
               </p>
-              <p className={`text-xs font-semibold mt-1 ${
-                sig.value === 'BULLISH' ? 'text-emerald-400' :
-                sig.value === 'BEARISH' ? 'text-red-400' : 'text-yellow-400'
-              }`}>
+              <p className="text-xs font-semibold mt-1" style={{ color: sig.value === 'BULLISH' ? 'var(--success-text)' : sig.value === 'BEARISH' ? 'var(--danger-text)' : 'var(--yellow-text)' }}>
                 {sig.value}{' '}
-                <span className="text-zinc-500 font-normal text-[10px]">
+                <span className="font-normal text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
                   ({(sig.confidence * 100).toFixed(0)}%)
                 </span>
               </p>
@@ -668,16 +629,13 @@ function SignalResultPanel({ result }: { result: SignalResult }) {
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 py-16 text-center">
+    <div className="surface py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
       <p className="text-3xl mb-3">👁</p>
-      <h3 className="text-base font-semibold text-white mb-1">Nothing on watchlist</h3>
-      <p className="text-sm text-zinc-500 mb-4">
+      <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Nothing on watchlist</h3>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
         Add tickers you&apos;re monitoring. Set price or score triggers to get alerts.
       </p>
-      <button
-        onClick={onAdd}
-        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition"
-      >
+      <button onClick={onAdd} className="btn btn-primary">
         + Add first ticker
       </button>
     </div>

@@ -71,19 +71,21 @@ export default function PaperTradesView() {
   const totalRealised = closed.reduce((sum, t) => sum + pnl(t), 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Paper Trades</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Simulated trades to test ideas before committing capital</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>📝 Paper Trades</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.85 }}>Simulated trades to test ideas before committing capital</div>
+          </div>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="btn btn-primary flex items-center gap-1.5"
+          >
+            <Plus size={14} /> New trade
+          </button>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition"
-        >
-          <Plus size={14} /> New trade
-        </button>
       </div>
 
       {/* Summary */}
@@ -93,17 +95,20 @@ export default function PaperTradesView() {
         <StatCard
           label="Total realised P&L"
           value={`€${totalRealised.toFixed(0)}`}
-          color={totalRealised >= 0 ? 'text-emerald-400' : 'text-red-400'}
+          color={totalRealised >= 0 ? 'var(--success-text)' : 'var(--danger-text)'}
         />
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg bg-zinc-800/60 p-1 w-fit">
+      <div className="flex gap-1 rounded-lg p-1 w-fit" style={{ background: 'var(--surface)' }}>
         {(['OPEN', 'CLOSED'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-md px-4 py-1.5 text-xs font-medium transition ${tab === t ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'}`}
+            className="rounded-md px-4 py-1.5 text-xs font-medium transition"
+            style={tab === t
+              ? { background: 'var(--bg)', color: 'var(--text-primary)' }
+              : { color: 'var(--text-secondary)' }}
           >
             {t} ({t === 'OPEN' ? open.length : closed.length})
           </button>
@@ -112,18 +117,18 @@ export default function PaperTradesView() {
 
       {/* Table */}
       {loading ? (
-        <div className="py-12 text-center text-zinc-500 text-sm">Loading…</div>
+        <div className="py-12 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>Loading…</div>
       ) : shown.length === 0 ? (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-10 text-center text-zinc-500 text-sm">
+        <div className="surface p-10 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
           No {tab.toLowerCase()} paper trades yet.
         </div>
       ) : (
-        <div className="rounded-xl border border-zinc-800 overflow-hidden">
+        <div className="surface overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 bg-zinc-900/80">
+              <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                 {['Ticker', 'Direction', 'Entry', 'Exit', 'Qty', 'P&L', 'Date', ''].map((h) => (
-                  <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -133,36 +138,42 @@ export default function PaperTradesView() {
                 const pp   = pnlPct(t)
                 const pos  = p >= 0
                 return (
-                  <tr key={t.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition">
+                  <tr key={t.id} style={{ borderBottom: '0.5px solid var(--border)' }}>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-white">{t.ticker}</div>
-                      <div className="text-xs text-zinc-500">{t.sector}</div>
+                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{t.ticker}</div>
+                      <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{t.sector}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${t.direction === 'LONG' ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'}`}>
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={t.direction === 'LONG'
+                          ? { background: 'var(--success-bg)', color: 'var(--success-text)' }
+                          : { background: 'var(--danger-bg)', color: 'var(--danger-text)' }}
+                      >
                         {t.direction === 'LONG' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                         {t.direction}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-white">€{t.entry_price.toFixed(2)}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-400">{t.exit_price ? `€${t.exit_price.toFixed(2)}` : '—'}</td>
-                    <td className="px-4 py-3 text-zinc-400">{t.quantity}</td>
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-primary)' }}>€{t.entry_price.toFixed(2)}</td>
+                    <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-secondary)' }}>{t.exit_price ? `€${t.exit_price.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{t.quantity}</td>
                     <td className="px-4 py-3">
                       {t.exit_price || t.status === 'CLOSED' ? (
-                        <span className={`font-mono font-semibold ${pos ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <span className="font-mono font-semibold" style={{ color: pos ? 'var(--success-text)' : 'var(--danger-text)' }}>
                           {pos ? '+' : ''}€{p.toFixed(0)} ({pos ? '+' : ''}{pp.toFixed(1)}%)
                         </span>
                       ) : (
-                        <span className="text-zinc-600 text-xs">Open</span>
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Open</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">{new Date(t.entry_date).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>{new Date(t.entry_date).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         {t.status === 'OPEN' && (
                           <button
                             onClick={() => setCloseModal({ id: t.id, ticker: t.ticker, direction: t.direction, entryPrice: t.entry_price })}
-                            className="rounded-md p-1 text-emerald-500 hover:bg-emerald-900/20 transition"
+                            className="rounded-md p-1 transition"
+                            style={{ color: 'var(--success-text)' }}
                             title="Close trade"
                           >
                             <Check size={13} />
@@ -170,7 +181,8 @@ export default function PaperTradesView() {
                         )}
                         <button
                           onClick={() => deleteTrade(t.id)}
-                          className="rounded-md p-1 text-zinc-500 hover:bg-zinc-700 hover:text-red-400 transition"
+                          className="rounded-md p-1 transition"
+                          style={{ color: 'var(--text-tertiary)' }}
                           title="Delete"
                         >
                           <X size={13} />
@@ -192,18 +204,25 @@ export default function PaperTradesView() {
 }
 
 /* ── Stat card ─────────────────────────────────────────────────────────────── */
-function StatCard({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) {
+function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className={`text-xl font-bold mt-0.5 ${color}`}>{value}</p>
+    <div className="kpi-card">
+      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+      <p className="text-xl font-bold mt-0.5" style={{ color: color ?? 'var(--text-primary)' }}>{value}</p>
     </div>
   )
 }
 
-/* ── Add trade modal ────────────────────────────────────────────────────────── */
-const INPUT = 'w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition'
+/* ── Shared input style ─────────────────────────────────────────────────────── */
+const inputStyle: React.CSSProperties = {
+  border: '0.5px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text-primary)',
+}
 
+const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition'
+
+/* ── Add trade modal ────────────────────────────────────────────────────────── */
 function AddTradeModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     ticker: '', name: '', exchange: 'NYSE', sector: 'Technology',
@@ -225,41 +244,56 @@ function AddTradeModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-          <h3 className="font-semibold text-white">New paper trade</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-md rounded-2xl shadow-2xl" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '0.5px solid var(--border)' }}>
+          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>New paper trade</h3>
+          <button onClick={onClose} style={{ color: 'var(--text-tertiary)' }}>✕</button>
         </div>
         <form onSubmit={submit} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs text-zinc-400">Ticker *</label><input required value={form.ticker} onChange={(e) => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} placeholder="AAPL" className={INPUT} /></div>
-            <div><label className="text-xs text-zinc-400">Name</label><input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Apple Inc." className={INPUT} /></div>
+            <div>
+              <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Ticker *</label>
+              <input required value={form.ticker} onChange={(e) => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} placeholder="AAPL" className={inputClass} style={inputStyle} />
+            </div>
+            <div>
+              <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Name</label>
+              <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Apple Inc." className={inputClass} style={inputStyle} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-zinc-400">Direction</label>
-              <select value={form.direction} onChange={(e) => setForm(f => ({ ...f, direction: e.target.value }))} className={INPUT}>
+              <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Direction</label>
+              <select value={form.direction} onChange={(e) => setForm(f => ({ ...f, direction: e.target.value }))} className={inputClass} style={inputStyle}>
                 <option value="LONG">LONG</option>
                 <option value="SHORT">SHORT</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-zinc-400">Exchange</label>
-              <select value={form.exchange} onChange={(e) => setForm(f => ({ ...f, exchange: e.target.value }))} className={INPUT}>
+              <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Exchange</label>
+              <select value={form.exchange} onChange={(e) => setForm(f => ({ ...f, exchange: e.target.value }))} className={inputClass} style={inputStyle}>
                 {['NYSE','NASDAQ','LSE','XETRA','AMS','EPA'].map(ex => <option key={ex}>{ex}</option>)}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs text-zinc-400">Entry price (€) *</label><input required type="number" step="any" value={form.entry_price} onChange={(e) => setForm(f => ({ ...f, entry_price: e.target.value }))} placeholder="150.00" className={INPUT} /></div>
-            <div><label className="text-xs text-zinc-400">Quantity *</label><input required type="number" min="1" value={form.quantity} onChange={(e) => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="100" className={INPUT} /></div>
+            <div>
+              <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Entry price (€) *</label>
+              <input required type="number" step="any" value={form.entry_price} onChange={(e) => setForm(f => ({ ...f, entry_price: e.target.value }))} placeholder="150.00" className={inputClass} style={inputStyle} />
+            </div>
+            <div>
+              <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Quantity *</label>
+              <input required type="number" min="1" value={form.quantity} onChange={(e) => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="100" className={inputClass} style={inputStyle} />
+            </div>
           </div>
-          <div><label className="text-xs text-zinc-400">Reason / thesis</label><textarea rows={2} value={form.reason} onChange={(e) => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="Why this trade?" className={`${INPUT} resize-none`} /></div>
-          {error && <p className="text-sm text-red-400 bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
+          <div>
+            <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Reason / thesis</label>
+            <textarea rows={2} value={form.reason} onChange={(e) => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="Why this trade?" className={`${inputClass} resize-none`} style={inputStyle} />
+          </div>
+          {error && <p className="text-sm rounded-lg px-3 py-2" style={{ color: 'var(--danger-text)', background: 'var(--danger-bg)' }}>{error}</p>}
           <div className="flex gap-2 justify-end pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 rounded-lg bg-indigo-600 text-sm text-white hover:bg-indigo-500 disabled:opacity-50">{loading ? 'Saving…' : 'Open trade'}</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>Cancel</button>
+            <button type="submit" disabled={loading} className="btn btn-primary disabled:opacity-50">{loading ? 'Saving…' : 'Open trade'}</button>
           </div>
         </form>
       </div>
@@ -286,22 +320,22 @@ function CloseTradeModal({ id, ticker, direction, entryPrice, onClose }: CloseMo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl p-6 space-y-4">
-        <h3 className="font-semibold text-white">Close {ticker}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-sm rounded-2xl shadow-2xl p-6 space-y-4" style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}>
+        <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Close {ticker}</h3>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-xs text-zinc-400">Exit price (€) *</label>
-            <input required type="number" step="any" value={exitPrice} onChange={(e) => setExitPrice(e.target.value)} placeholder={entryPrice.toString()} className={INPUT} />
+            <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Exit price (€) *</label>
+            <input required type="number" step="any" value={exitPrice} onChange={(e) => setExitPrice(e.target.value)} placeholder={entryPrice.toString()} className={inputClass} style={inputStyle} />
           </div>
           {diff !== null && (
-            <p className={`text-sm font-semibold ${parseFloat(diff) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className="text-sm font-semibold" style={{ color: parseFloat(diff) >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
               Estimated return: {parseFloat(diff) >= 0 ? '+' : ''}{diff}%
             </p>
           )}
           <div className="flex gap-2 justify-end">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 rounded-lg bg-emerald-600 text-sm text-white hover:bg-emerald-500 disabled:opacity-50">{loading ? 'Closing…' : 'Close trade'}</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>Cancel</button>
+            <button type="submit" disabled={loading} className="btn btn-primary disabled:opacity-50">{loading ? 'Closing…' : 'Close trade'}</button>
           </div>
         </form>
       </div>

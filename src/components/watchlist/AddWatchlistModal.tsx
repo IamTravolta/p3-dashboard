@@ -20,6 +20,14 @@ const SECTORS   = [
 ]
 const FACTOR_LABELS = { q: 'Quality', g: 'Growth', v: 'Valuation', m: 'Momentum', s: 'Sentiment' }
 const DEFAULT_FS: FactorScores = { q: 0, g: 0, v: 0, m: 0, s: 0 }
+const CONVICTION = ['Very Low', 'Low', 'Medium', 'High', 'Very High']
+
+const inputStyle: React.CSSProperties = {
+  border: '0.5px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text-primary)',
+}
+const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition placeholder-zinc-500'
 
 export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchlistModalProps) {
   const upsertWatchlistItem = useDashboardStore((s) => s.upsertWatchlistItem)
@@ -163,53 +171,74 @@ export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchl
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
-        <div className="sticky top-0 flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-4">
-          <h2 className="text-base font-semibold text-white">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
+        style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}
+      >
+        {/* Header */}
+        <div
+          className="sticky top-0 flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--surface)' }}
+        >
+          <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
             {editItem ? 'Edit watchlist item' : 'Add to watchlist'}
           </h2>
-          <button onClick={onClose} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white transition">✕</button>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1.5 transition"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            ✕
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Ticker + Name */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Ticker *">
-              <input required value={form.ticker} onChange={(e) => set('ticker', e.target.value.toUpperCase())} placeholder="NVDA" className={INPUT} />
+              <input required value={form.ticker} onChange={(e) => set('ticker', e.target.value.toUpperCase())} placeholder="NVDA" className={inputClass} style={inputStyle} />
             </Field>
             <Field label="Company name *">
-              <input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="NVIDIA Corporation" className={INPUT} />
+              <input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="NVIDIA Corporation" className={inputClass} style={inputStyle} />
             </Field>
           </div>
 
           {/* Exchange + Sector */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Exchange">
-              <select value={form.exchange} onChange={(e) => set('exchange', e.target.value)} className={INPUT}>
+              <select value={form.exchange} onChange={(e) => set('exchange', e.target.value)} className={inputClass} style={inputStyle}>
                 {EXCHANGES.map((ex) => <option key={ex}>{ex}</option>)}
               </select>
             </Field>
             <Field label="Sector">
-              <select value={form.sector} onChange={(e) => set('sector', e.target.value)} className={INPUT}>
+              <select value={form.sector} onChange={(e) => set('sector', e.target.value)} className={inputClass} style={inputStyle}>
                 {SECTORS.map((s) => <option key={s}>{s}</option>)}
               </select>
             </Field>
           </div>
 
-          {/* Current price */}
+          {/* Current price + expiry */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Current price">
-              <input type="number" step="any" min="0" value={form.current_price} onChange={(e) => set('current_price', e.target.value)} placeholder="450.00" className={INPUT} />
+              <input type="number" step="any" min="0" value={form.current_price} onChange={(e) => set('current_price', e.target.value)} placeholder="450.00" className={inputClass} style={inputStyle} />
             </Field>
             <Field label="Expiry date (optional)">
-              <input type="date" value={form.expiry_date} onChange={(e) => set('expiry_date', e.target.value)} className={INPUT} />
+              <input type="date" value={form.expiry_date} onChange={(e) => set('expiry_date', e.target.value)} className={inputClass} style={inputStyle} />
             </Field>
           </div>
 
           {/* Triggers */}
-          <div className="rounded-xl bg-zinc-800/50 border border-zinc-700/50 p-4 space-y-3">
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Alert triggers</p>
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{ background: 'var(--bg)', border: '0.5px solid var(--border)' }}
+          >
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+              Alert triggers
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Price drops to (€)">
                 <input
@@ -219,9 +248,10 @@ export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchl
                   value={form.price_trigger}
                   onChange={(e) => set('price_trigger', e.target.value)}
                   placeholder="e.g. 400.00"
-                  className={INPUT}
+                  className={inputClass}
+                  style={inputStyle}
                 />
-                <p className="text-xs text-zinc-600 mt-1">Alert when live price ≤ this</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Alert when live price ≤ this</p>
               </Field>
               <Field label="Score reaches (0–10)">
                 <input
@@ -232,9 +262,10 @@ export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchl
                   value={form.score_trigger}
                   onChange={(e) => set('score_trigger', e.target.value)}
                   placeholder="e.g. 7.5"
-                  className={INPUT}
+                  className={inputClass}
+                  style={inputStyle}
                 />
-                <p className="text-xs text-zinc-600 mt-1">Alert when conviction score ≥ this</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Alert when conviction score ≥ this</p>
               </Field>
             </div>
           </div>
@@ -242,14 +273,27 @@ export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchl
           {/* Factor scores */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Factor Scores (0–10)</p>
-              <span className="text-xs text-indigo-400 font-mono">Score: {score.toFixed(2)}</span>
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+                Factor Scores (0–10)
+              </p>
+              <span className="text-xs font-mono" style={{ color: 'var(--primary)' }}>
+                Score: {score.toFixed(2)}
+              </span>
             </div>
             <div className="grid grid-cols-5 gap-2">
               {(Object.keys(FACTOR_LABELS) as (keyof FactorScores)[]).map((k) => (
                 <div key={k} className="space-y-1">
-                  <label className="block text-xs text-zinc-500">{FACTOR_LABELS[k]}</label>
-                  <input type="number" min="0" max="10" step="0.5" value={form.factor_scores[k]} onChange={(e) => setFactor(k, parseFloat(e.target.value) || 0)} className={INPUT} />
+                  <label className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>{FACTOR_LABELS[k]}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.5"
+                    value={form.factor_scores[k]}
+                    onChange={(e) => setFactor(k, parseFloat(e.target.value) || 0)}
+                    className={inputClass}
+                    style={inputStyle}
+                  />
                 </div>
               ))}
             </div>
@@ -257,24 +301,55 @@ export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchl
 
           {/* Conviction */}
           <Field label={`Conviction: ${CONVICTION[form.conviction - 1]}`}>
-            <input type="range" min="1" max="5" value={form.conviction} onChange={(e) => set('conviction', parseInt(e.target.value))} className="w-full accent-indigo-500" />
-            <div className="flex justify-between text-xs text-zinc-600 mt-0.5">
+            <input
+              type="range"
+              min="1"
+              max="5"
+              value={form.conviction}
+              onChange={(e) => set('conviction', parseInt(e.target.value))}
+              className="w-full"
+              style={{ accentColor: 'var(--primary)' }}
+            />
+            <div className="flex justify-between text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
               {CONVICTION.map((l) => <span key={l}>{l}</span>)}
             </div>
           </Field>
 
           {/* Reason */}
           <Field label="Why watching?">
-            <textarea rows={3} value={form.reason} onChange={(e) => set('reason', e.target.value)} placeholder="What would make you pull the trigger on this?" className={`${INPUT} resize-none`} />
+            <textarea
+              rows={3}
+              value={form.reason}
+              onChange={(e) => set('reason', e.target.value)}
+              placeholder="What would make you pull the trigger on this?"
+              className={`${inputClass} resize-none`}
+              style={inputStyle}
+            />
           </Field>
 
           {error && (
-            <p className="rounded-lg bg-red-900/20 border border-red-800 px-3 py-2 text-sm text-red-400">{error}</p>
+            <p
+              className="rounded-lg px-3 py-2 text-sm"
+              style={{ background: 'var(--danger-bg)', border: '0.5px solid var(--danger-text)', color: 'var(--danger-text)' }}
+            >
+              {error}
+            </p>
           )}
 
           <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition">Cancel</button>
-            <button type="submit" disabled={loading} className="px-5 py-2 rounded-lg bg-indigo-600 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm transition"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary px-5 py-2 text-sm disabled:opacity-50"
+            >
               {loading ? 'Saving…' : editItem ? 'Update' : 'Add to watchlist'}
             </button>
           </div>
@@ -284,13 +359,10 @@ export default function AddWatchlistModal({ open, onClose, editItem }: AddWatchl
   )
 }
 
-const INPUT = 'w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition'
-const CONVICTION = ['Very Low', 'Low', 'Medium', 'High', 'Very High']
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-medium text-zinc-400">{label}</label>
+      <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</label>
       {children}
     </div>
   )

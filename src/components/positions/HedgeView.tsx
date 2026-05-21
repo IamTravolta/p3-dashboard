@@ -26,14 +26,14 @@ type FetchState =
 
 function BackendBanner() {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-amber-700/50 bg-amber-900/20 px-4 py-3">
-      <span className="text-amber-400 text-base shrink-0 mt-0.5">⚠</span>
+    <div className="flex items-start gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)' }}>
+      <span className="text-base shrink-0 mt-0.5" style={{ color: 'var(--warning-text)' }}>⚠</span>
       <div>
-        <p className="text-sm font-medium text-amber-300">Railway backend not connected</p>
-        <p className="text-xs text-amber-500 mt-0.5">
+        <p className="text-sm font-medium" style={{ color: 'var(--warning-text)' }}>Railway backend not connected</p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--warning-text)', opacity: 0.8 }}>
           Configure <span className="font-mono">RAILWAY_BACKEND_URL</span> in your environment
           and set the Railway URL in{' '}
-          <span className="font-medium text-amber-400">Settings</span> to enable AI hedge
+          <span className="font-medium">Settings</span> to enable AI hedge
           suggestions.
         </p>
       </div>
@@ -50,18 +50,15 @@ interface HedgeCardProps {
 
 function HedgeCard({ title, description, examples, icon }: HedgeCardProps) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="surface p-4">
       <div className="flex items-start gap-3">
         <span className="text-2xl shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-white">{title}</h3>
-          <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{description}</p>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{description}</p>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {examples.map((ex) => (
-              <span
-                key={ex}
-                className="rounded-full border border-zinc-700 bg-zinc-800/50 px-2 py-0.5 text-xs font-mono text-zinc-400"
-              >
+              <span key={ex} className="pill pill-neutral font-mono">
                 {ex}
               </span>
             ))}
@@ -79,15 +76,15 @@ function AiHedgeResults({ data }: { data: any }) {
 
   if (items.length === 0) {
     return (
-      <div className="mt-4 rounded-lg border border-dashed border-zinc-700 py-6 text-center">
-        <p className="text-xs text-zinc-500">No hedge suggestions returned from backend.</p>
+      <div className="mt-4 rounded-lg py-6 text-center" style={{ border: '1px dashed var(--border)' }}>
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>No hedge suggestions returned from backend.</p>
       </div>
     )
   }
 
   return (
     <div className="mt-4 space-y-2">
-      <div className="text-xs font-medium text-zinc-400 mb-2">AI hedge suggestions:</div>
+      <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>AI hedge suggestions:</div>
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {items.map((item: any, i: number) => {
         const instrument = item.instrument ?? item.ticker   ?? item.symbol ?? item.name ?? `Suggestion ${i + 1}`
@@ -95,18 +92,18 @@ function AiHedgeResults({ data }: { data: any }) {
         const weight     = item.weight     ?? item.weight_pct ?? item.allocation ?? null
 
         return (
-          <div key={i} className="rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-3 flex items-start gap-3">
+          <div key={i} className="surface px-3 py-3 flex items-start gap-3" style={{ borderRadius: 8 }}>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-sm font-bold text-white">{instrument}</span>
+                <span className="font-mono text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{instrument}</span>
                 {weight != null && (
-                  <span className="ml-auto rounded-full bg-indigo-900/40 border border-indigo-700/50 px-2 py-0.5 text-xs font-mono text-indigo-300">
+                  <span className="pill pill-info ml-auto font-mono">
                     {typeof weight === 'number' ? `${weight}%` : weight}
                   </span>
                 )}
               </div>
               {rationale && (
-                <p className="text-xs text-zinc-400 leading-relaxed">{rationale}</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{rationale}</p>
               )}
             </div>
           </div>
@@ -195,11 +192,14 @@ export default function HedgeView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-sm font-semibold text-white">Hedge Suggestions</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">
-          Protect your portfolio against macro risks and sharp drawdowns.
-        </p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>🛡 Hedge Suggestions</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.85 }}>Protect your portfolio against macro risks and sharp drawdowns</div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--warning-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--warning-text)', lineHeight: 1.6 }}>
+            Review portfolio hedging strategies and get AI-powered recommendations tailored to your factor exposures.
+          </div>
+        </div>
       </div>
 
       {/* Backend banner */}
@@ -207,29 +207,29 @@ export default function HedgeView() {
 
       {/* Portfolio summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
-          <div className="text-xs text-zinc-500 mb-1">Total Value</div>
-          <div className="text-base font-mono font-semibold text-white">
+        <div className="kpi-card">
+          <div className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Total Value</div>
+          <div className="text-base font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>
             {fmtCurrency(totalValue)}
           </div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
-          <div className="text-xs text-zinc-500 mb-1">Largest Sector</div>
-          <div className="text-base font-semibold text-white truncate">{largestSector}</div>
+        <div className="kpi-card">
+          <div className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Largest Sector</div>
+          <div className="text-base font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{largestSector}</div>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 col-span-2 sm:col-span-1">
-          <div className="text-xs text-zinc-500 mb-1">USD Exposure</div>
-          <div className="text-base font-mono font-semibold text-white">
+        <div className="kpi-card col-span-2 sm:col-span-1">
+          <div className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>USD Exposure</div>
+          <div className="text-base font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>
             {usdExposurePct.toFixed(1)}%
           </div>
-          <div className="text-xs text-zinc-600 mt-0.5">{fmtCurrency(usdValue)}</div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{fmtCurrency(usdValue)}</div>
         </div>
       </div>
 
       {/* Get suggestions button */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-5">
-        <h3 className="text-sm font-semibold text-white mb-2">AI Hedge Analysis</h3>
-        <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+      <div className="surface px-5 py-5">
+        <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>AI Hedge Analysis</h3>
+        <p className="text-xs mb-4 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
           Send your current portfolio to the Railway backend for AI-powered hedge recommendations
           tailored to your factor exposures, sector concentrations, and macro environment.
         </p>
@@ -237,7 +237,7 @@ export default function HedgeView() {
         <button
           onClick={getHedgeSuggestions}
           disabled={fetchState.status === 'loading' || positions.length === 0}
-          className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition disabled:opacity-50"
+          className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
         >
           {fetchState.status === 'loading' ? (
             <>
@@ -253,12 +253,12 @@ export default function HedgeView() {
         </button>
 
         {positions.length === 0 && (
-          <p className="text-xs text-zinc-600 mt-2">Add positions to your portfolio first.</p>
+          <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>Add positions to your portfolio first.</p>
         )}
 
         {/* Error state */}
         {fetchState.status === 'error' && (
-          <div className="mt-4 rounded-lg bg-red-900/20 border border-red-800 px-3 py-2 text-xs text-red-400">
+          <div className="mt-4 rounded-lg px-3 py-2 text-xs" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-text)', color: 'var(--danger-text)' }}>
             {fetchState.message}
           </div>
         )}
@@ -270,7 +270,7 @@ export default function HedgeView() {
 
         {/* Not configured state */}
         {!backendConfigured && fetchState.status === 'idle' && (
-          <p className="mt-3 text-xs text-zinc-500">
+          <p className="mt-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
             Connect Railway to get AI hedge suggestions.
           </p>
         )}
@@ -278,7 +278,7 @@ export default function HedgeView() {
 
       {/* Placeholder hedge cards */}
       <div>
-        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-secondary)' }}>
           Common Hedging Strategies
         </h3>
         <div className="space-y-3">
@@ -290,12 +290,12 @@ export default function HedgeView() {
 
       {/* Setup note */}
       {!backendConfigured && (
-        <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 px-5 py-4">
-          <h3 className="text-sm font-semibold text-white mb-1">How to enable AI hedging</h3>
-          <ol className="list-decimal list-inside space-y-1 text-xs text-zinc-500">
+        <div className="rounded-xl px-5 py-4" style={{ border: '1px dashed var(--border)' }}>
+          <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>How to enable AI hedging</h3>
+          <ol className="list-decimal list-inside space-y-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
             <li>Deploy the Railway backend service</li>
             <li>
-              Set <span className="font-mono text-zinc-400">RAILWAY_BACKEND_URL</span> in your{' '}
+              Set <span className="font-mono" style={{ color: 'var(--text-primary)' }}>RAILWAY_BACKEND_URL</span> in your{' '}
               <span className="font-mono">.env.local</span>
             </li>
             <li>Enter the URL in the Settings tab</li>

@@ -14,24 +14,17 @@ function calcScore(fs: FactorScores): number {
   return fs.q * 0.25 + fs.g * 0.25 + fs.v * 0.20 + fs.m * 0.15 + fs.s * 0.15
 }
 
-function tileColors(score: number): { bg: string; pill: string } {
-  if (score >= 7) return { bg: 'bg-emerald-950/50', pill: 'bg-emerald-900/80 text-emerald-300' }
-  if (score >= 5) return { bg: 'bg-yellow-950/50',  pill: 'bg-yellow-900/80 text-yellow-300'  }
-  return              { bg: 'bg-red-950/50',         pill: 'bg-red-900/80 text-red-300'        }
+function tileStyles(score: number): { bg: string; pillStyle: React.CSSProperties } {
+  if (score >= 7) return { bg: 'var(--success-bg)',  pillStyle: { background: 'rgba(125,216,159,0.15)', color: 'var(--success-text)' } }
+  if (score >= 5) return { bg: 'var(--yellow-bg)',   pillStyle: { background: 'rgba(240,209,74,0.15)', color: 'var(--yellow-text)' } }
+  return              { bg: 'var(--danger-bg)',   pillStyle: { background: 'rgba(248,113,113,0.15)', color: 'var(--danger-text)' } }
 }
 
-function barColor(current: number, cap: number): string {
+function barStyleColor(current: number, cap: number): string {
   const ratio = current / cap
-  if (ratio >= 1)    return 'bg-red-500'
-  if (ratio >= 0.80) return 'bg-amber-500'
-  return 'bg-emerald-500'
-}
-
-function barTextColor(current: number, cap: number): string {
-  const ratio = current / cap
-  if (ratio >= 1)    return 'text-red-400'
-  if (ratio >= 0.80) return 'text-amber-400'
-  return 'text-emerald-400'
+  if (ratio >= 1)    return 'var(--danger-text)'
+  if (ratio >= 0.80) return 'var(--warning-text)'
+  return 'var(--success-text)'
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -45,29 +38,29 @@ function ActionBanners({ positions, watchlist }: { positions: Position[]; watchl
   return (
     <div className="flex flex-col gap-2 mb-4">
       {readyCount > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-800/60 bg-emerald-950/40 px-4 py-3">
-          <span className="text-emerald-400 text-lg" aria-hidden>✓</span>
+        <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid var(--success-text)', background: 'var(--success-bg)' }}>
+          <span className="text-lg" aria-hidden style={{ color: 'var(--success-text)' }}>✓</span>
           <div>
-            <p className="text-sm font-semibold text-emerald-300">
+            <p className="text-sm font-semibold" style={{ color: 'var(--success-text)' }}>
               {readyCount} watchlist {readyCount === 1 ? 'item' : 'items'} ready to act on
             </p>
-            <p className="text-xs text-emerald-600">Score ≥ 7 — conditions met for entry consideration</p>
+            <p className="text-xs" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Score ≥ 7 — conditions met for entry consideration</p>
           </div>
-          <span className="ml-auto rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+          <span className="ml-auto rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: 'rgba(125,216,159,0.15)', color: 'var(--success-text)' }}>
             {readyCount}
           </span>
         </div>
       )}
       {attentionCount > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-800/60 bg-amber-950/40 px-4 py-3">
-          <span className="text-amber-400 text-lg" aria-hidden>!</span>
+        <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)' }}>
+          <span className="text-lg" aria-hidden style={{ color: 'var(--warning-text)' }}>!</span>
           <div>
-            <p className="text-sm font-semibold text-amber-300">
+            <p className="text-sm font-semibold" style={{ color: 'var(--warning-text)' }}>
               {attentionCount} position{attentionCount === 1 ? '' : 's'} need attention
             </p>
-            <p className="text-xs text-amber-600">Score &lt; 4 — consider reviewing thesis or trimming</p>
+            <p className="text-xs" style={{ color: 'var(--warning-text)', opacity: 0.7 }}>Score &lt; 4 — consider reviewing thesis or trimming</p>
           </div>
-          <span className="ml-auto rounded-full bg-amber-900/60 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+          <span className="ml-auto rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: 'rgba(251,146,60,0.15)', color: 'var(--warning-text)' }}>
             {attentionCount}
           </span>
         </div>
@@ -82,7 +75,7 @@ function PositionHeatmap({ positions, prices }: { positions: Position[]; prices:
 
   if (positions.length === 0) {
     return (
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-center text-sm text-zinc-500">
+      <div className="surface p-4 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
         No positions to display
       </div>
     )
@@ -94,15 +87,15 @@ function PositionHeatmap({ positions, prices }: { positions: Position[]; prices:
   }, 0)
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-3">Position Heatmap</h3>
+    <div className="surface p-4">
+      <h3 className="text-xs font-medium uppercase tracking-wide mb-3" style={{ color: 'var(--text-secondary)' }}>Position Heatmap</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {positions.map(p => {
           const livePrice = prices[p.ticker] ?? p.currentPrice
           const value     = livePrice * p.shares
           const pnlPct    = p.avgBuyPrice > 0 ? ((livePrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : 0
           const score     = calcScore(p.factorScores)
-          const { bg, pill } = tileColors(score)
+          const { bg, pillStyle } = tileStyles(score)
           const positive  = pnlPct >= 0
           const weightPct = totalValue > 0 ? (value / totalValue) * 100 : 0
 
@@ -113,21 +106,22 @@ function PositionHeatmap({ positions, prices }: { positions: Position[]; prices:
                 setActiveTicker(p.ticker)
                 setActiveGroup('portfolio', 'positions')
               }}
-              className={`${bg} rounded-lg border border-zinc-800/60 p-3 text-left transition hover:border-zinc-600 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+              className="rounded-lg p-3 text-left transition focus:outline-none"
+              style={{ background: bg, border: '0.5px solid var(--border)' }}
             >
               <div className="flex items-start justify-between mb-2">
-                <span className="font-mono text-sm font-bold text-white">{p.ticker}</span>
-                <span className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${pill}`}>
+                <span className="font-mono text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{p.ticker}</span>
+                <span className="rounded-full px-1.5 py-0.5 text-xs font-semibold" style={pillStyle}>
                   {score.toFixed(1)}
                 </span>
               </div>
-              <p className="text-xs text-zinc-400 tabular-nums">
+              <p className="text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
                 €{value.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}
               </p>
-              <p className={`text-xs font-medium tabular-nums mt-0.5 ${positive ? 'text-emerald-400' : 'text-red-400'}`}>
+              <p className="text-xs font-medium tabular-nums mt-0.5" style={{ color: positive ? 'var(--success-text)' : 'var(--danger-text)' }}>
                 {positive ? '+' : ''}{pnlPct.toFixed(1)}%
               </p>
-              <p className="text-xs text-zinc-600 mt-1">{weightPct.toFixed(1)}% of ptf</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{weightPct.toFixed(1)}% of ptf</p>
             </button>
           )
         })}
@@ -138,28 +132,27 @@ function PositionHeatmap({ positions, prices }: { positions: Position[]; prices:
 
 function CapStatusBar({ label, current, cap }: { label: string; current: number; cap: number }) {
   const pct   = Math.min(current / cap * 100, 100)
-  const color = barColor(current, cap)
-  const text  = barTextColor(current, cap)
+  const color = barStyleColor(current, cap)
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-zinc-400">{label}</span>
-        <span className={`tabular-nums font-medium ${text}`}>
+        <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+        <span className="tabular-nums font-medium" style={{ color }}>
           {current.toFixed(1)}% / {cap}%
         </span>
       </div>
-      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="progress-track w-full">
         <div
-          className={`h-full rounded-full transition-all ${color}`}
-          style={{ width: `${pct}%` }}
+          className="progress-fill rounded-full transition-all"
+          style={{ width: `${pct}%`, background: color }}
         />
       </div>
       {/* cap marker line */}
       <div className="relative h-0">
         <div
-          className="absolute top-[-10px] w-px h-3 bg-zinc-500"
-          style={{ left: `${Math.min(cap / cap * 100, 100)}%` }}
+          className="absolute top-[-10px] w-px h-3"
+          style={{ left: `${Math.min(cap / cap * 100, 100)}%`, background: 'var(--text-tertiary)' }}
           title={`Cap: ${cap}%`}
         />
       </div>
@@ -222,8 +215,8 @@ function CapStatusBars({
   ]
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4">Cap Status</h3>
+    <div className="surface p-4">
+      <h3 className="text-xs font-medium uppercase tracking-wide mb-4" style={{ color: 'var(--text-secondary)' }}>Cap Status</h3>
       <div className="space-y-4">
         {bars.map(b => (
           <CapStatusBar key={b.label} {...b} />
@@ -248,17 +241,17 @@ interface VerdictData {
   }>
 }
 
-function verdictBadgeColor(verdict: string): string {
-  if (verdict === 'BUY')  return 'bg-emerald-900/60 text-emerald-300 border-emerald-700'
-  if (verdict === 'SELL') return 'bg-red-900/60 text-red-300 border-red-700'
-  return 'bg-yellow-900/60 text-yellow-300 border-yellow-700'
+function verdictBadgeStyle(verdict: string): React.CSSProperties {
+  if (verdict === 'BUY')  return { background: 'var(--success-bg)', color: 'var(--success-text)', border: '1px solid var(--success-text)' }
+  if (verdict === 'SELL') return { background: 'var(--danger-bg)', color: 'var(--danger-text)', border: '1px solid var(--danger-text)' }
+  return { background: 'var(--yellow-bg)', color: 'var(--yellow-text)', border: '1px solid var(--yellow-text)' }
 }
 
 function outcomeColor(outcome: string): string {
-  if (outcome === 'correct')     return 'text-emerald-400'
-  if (outcome === 'wrong')       return 'text-red-400'
-  if (outcome === 'missed_gain') return 'text-orange-400'
-  return 'text-zinc-400'
+  if (outcome === 'correct')     return 'var(--success-text)'
+  if (outcome === 'wrong')       return 'var(--danger-text)'
+  if (outcome === 'missed_gain') return 'var(--warning-text)'
+  return 'var(--text-secondary)'
 }
 
 function TickerDetailPanel({ ticker }: { ticker: string }) {
@@ -284,16 +277,17 @@ function TickerDetailPanel({ ticker }: { ticker: string }) {
   }, [ticker])
 
   return (
-    <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5 space-y-4 animate-in slide-in-from-top-2 duration-200">
+    <div className="surface p-5 space-y-4">
       {/* Panel header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-lg font-bold text-white">{ticker}</span>
-          <span className="text-xs text-zinc-500">Latest verdict</span>
+          <span className="font-mono text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{ticker}</span>
+          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Latest verdict</span>
         </div>
         <button
           onClick={() => setActiveTicker(null)}
-          className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white transition"
+          className="rounded-md p-1.5 transition"
+          style={{ color: 'var(--text-tertiary)' }}
           aria-label="Close"
         >
           ✕
@@ -301,33 +295,33 @@ function TickerDetailPanel({ ticker }: { ticker: string }) {
       </div>
 
       {loading && (
-        <p className="text-sm text-zinc-500 animate-pulse">Loading verdict…</p>
+        <p className="text-sm animate-pulse" style={{ color: 'var(--text-secondary)' }}>Loading verdict…</p>
       )}
 
       {error && (
-        <p className="text-sm text-red-400 rounded-lg bg-red-900/20 border border-red-800 px-3 py-2">{error}</p>
+        <p className="text-sm rounded-lg px-3 py-2" style={{ color: 'var(--danger-text)', background: 'var(--danger-bg)', border: '1px solid var(--danger-text)' }}>{error}</p>
       )}
 
       {!loading && !error && !data && (
-        <p className="text-sm text-zinc-500 italic">No verdict on record for {ticker}.</p>
+        <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>No verdict on record for {ticker}.</p>
       )}
 
       {data && (
         <div className="space-y-4">
           {/* Verdict badge + confidence */}
           <div className="flex items-center gap-3 flex-wrap">
-            <span className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-bold ${verdictBadgeColor(data.final_verdict)}`}>
+            <span className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-bold" style={verdictBadgeStyle(data.final_verdict)}>
               {data.final_verdict}
             </span>
             <div className="flex flex-col">
-              <span className="text-xs text-zinc-500">Confidence</span>
-              <span className="text-sm font-semibold text-white tabular-nums">
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Confidence</span>
+              <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>
                 {(data.confidence * 100).toFixed(0)}%
               </span>
             </div>
             <div className="flex flex-col ml-auto text-right">
-              <span className="text-xs text-zinc-500">Logged</span>
-              <span className="text-xs text-zinc-400">
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Logged</span>
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                 {new Date(data.logged_at).toLocaleDateString()}
               </span>
             </div>
@@ -336,26 +330,27 @@ function TickerDetailPanel({ ticker }: { ticker: string }) {
           {/* Reasoning */}
           {data.reasoning && (
             <div>
-              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1.5">Reasoning</h4>
-              <p className="text-sm text-zinc-300 leading-relaxed">{data.reasoning}</p>
+              <h4 className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-secondary)' }}>Reasoning</h4>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{data.reasoning}</p>
             </div>
           )}
 
           {/* Outcome history */}
           {data.outcomes && data.outcomes.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Outcome history</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-secondary)' }}>Outcome history</h4>
               <div className="flex flex-wrap gap-2">
                 {data.outcomes.map((o) => (
                   <div
                     key={o.days_since}
-                    className="rounded-lg border border-zinc-800 bg-zinc-800/50 px-3 py-2 text-center min-w-[72px]"
+                    className="rounded-lg px-3 py-2 text-center min-w-[72px]"
+                    style={{ border: '0.5px solid var(--border)', background: 'var(--bg)' }}
                   >
-                    <div className="text-xs text-zinc-500">{o.days_since}d</div>
-                    <div className={`text-sm font-semibold tabular-nums ${o.price_change_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{o.days_since}d</div>
+                    <div className="text-sm font-semibold tabular-nums" style={{ color: o.price_change_pct >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                       {o.price_change_pct >= 0 ? '+' : ''}{o.price_change_pct.toFixed(1)}%
                     </div>
-                    <div className={`text-xs capitalize ${outcomeColor(o.outcome)}`}>{o.outcome}</div>
+                    <div className="text-xs capitalize" style={{ color: outcomeColor(o.outcome) }}>{o.outcome}</div>
                   </div>
                 ))}
               </div>

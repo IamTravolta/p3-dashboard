@@ -24,14 +24,14 @@ function calcScore(fs: { q: number; g: number; v: number; m: number; s: number }
 }
 
 function VerdictBadge({ verdict }: { verdict?: string }) {
-  if (!verdict) return <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">No Signal</span>
-  const colors: Record<string, string> = {
-    BUY:  'bg-emerald-900/70 text-emerald-300',
-    SELL: 'bg-red-900/70 text-red-300',
-    HOLD: 'bg-zinc-800 text-zinc-400',
+  if (!verdict) return <span className="pill pill-neutral">No Signal</span>
+  const pillMap: Record<string, string> = {
+    BUY:  'pill pill-success',
+    SELL: 'pill pill-danger',
+    HOLD: 'pill pill-neutral',
   }
   return (
-    <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${colors[verdict] ?? colors.HOLD}`}>
+    <span className={pillMap[verdict] ?? pillMap.HOLD}>
       {verdict}
     </span>
   )
@@ -39,13 +39,13 @@ function VerdictBadge({ verdict }: { verdict?: string }) {
 
 function ScoreBar({ score }: { score: number }) {
   const pct = Math.min(100, (score / 10) * 100)
-  const color = score >= 7 ? 'bg-emerald-500' : score >= 5 ? 'bg-amber-500' : 'bg-red-500'
+  const color = score >= 7 ? 'var(--success-text)' : score >= 5 ? 'var(--warning-text)' : 'var(--danger-text)'
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      <div className="progress-track flex-1">
+        <div className="progress-fill rounded-full" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="text-[10px] font-mono text-zinc-400 w-6">{score.toFixed(1)}</span>
+      <span className="text-[10px] font-mono w-6" style={{ color: 'var(--text-secondary)' }}>{score.toFixed(1)}</span>
     </div>
   )
 }
@@ -59,22 +59,33 @@ export default function WatchToSellView() {
 
   if (flagged.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 py-16 text-center">
-        <p className="text-sm text-zinc-400 font-medium">No positions flagged for exit</p>
-        <p className="text-xs text-zinc-600 mt-1">
-          Positions with SELL verdicts, low-confidence HOLDs, or scores below 4 will appear here
-        </p>
+      <div className="space-y-4">
+        <div className="surface p-4" style={{ borderLeft: '4px solid var(--danger-text)' }}>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>⚠ Watch to Sell</h1>
+          <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.85 }}>Positions flagged for exit review</div>
+        </div>
+        <div className="rounded-xl py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>No positions flagged for exit</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            Positions with SELL verdicts, low-confidence HOLDs, or scores below 4 will appear here
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-semibold text-white">Watch to Sell</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--danger-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>⚠ Watch to Sell</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.85 }}>
           {flagged.length} position{flagged.length !== 1 ? 's' : ''} flagged for exit review
-        </p>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--danger-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--danger-text)', lineHeight: 1.6 }}>
+            Positions with SELL verdicts, low-confidence HOLDs, or factor scores below 4 are listed here for your review.
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -87,40 +98,34 @@ export default function WatchToSellView() {
           const pnlPct = p.avgBuyPrice > 0 ? ((currentPrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : 0
 
           return (
-            <div
-              key={p.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 space-y-3 hover:border-zinc-700 transition"
-            >
+            <div key={p.id} className="surface p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <TickerChip ticker={p.ticker} />
                   <div className="flex items-center gap-2">
                     <VerdictBadge verdict={verdict?.finalVerdict} />
                     {verdict?.confidence !== undefined && (
-                      <span className="text-[10px] text-zinc-500">
+                      <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
                         {(verdict.confidence * 100).toFixed(0)}% conf
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <p className="text-sm font-semibold" style={{ color: pnl >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                     {pnl >= 0 ? '+' : ''}{pnl.toFixed(0)} ({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%)
                   </p>
-                  <p className="text-[11px] text-zinc-500">{p.shares} shares @ {p.avgBuyPrice.toFixed(2)}</p>
+                  <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{p.shares} shares @ {p.avgBuyPrice.toFixed(2)}</p>
                 </div>
               </div>
 
               <ScoreBar score={score} />
 
               {verdict?.reasoning && (
-                <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{verdict.reasoning}</p>
+                <p className="text-xs leading-relaxed line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{verdict.reasoning}</p>
               )}
 
-              <button
-                onClick={() => {}}
-                className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition"
-              >
+              <button onClick={() => {}} className="btn">
                 Review Position
               </button>
             </div>

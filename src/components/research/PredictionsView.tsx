@@ -11,20 +11,20 @@ interface PredictionMarket {
   updatedAt:   string
 }
 
-function barColor(sentiment: PredictionMarket['sentiment'], pct: number): string {
+function barStyle(sentiment: PredictionMarket['sentiment'], pct: number): React.CSSProperties {
   if (sentiment === 'positive') {
-    return pct >= 60 ? 'bg-emerald-500' : pct >= 35 ? 'bg-emerald-700' : 'bg-zinc-600'
+    return { background: pct >= 60 ? 'var(--success-text)' : pct >= 35 ? '#2d6a44' : 'var(--text-tertiary)' }
   }
   if (sentiment === 'negative') {
-    return pct >= 60 ? 'bg-red-500' : pct >= 35 ? 'bg-red-700' : 'bg-zinc-600'
+    return { background: pct >= 60 ? 'var(--danger-text)' : pct >= 35 ? '#7a2020' : 'var(--text-tertiary)' }
   }
-  return 'bg-zinc-500'
+  return { background: 'var(--text-secondary)' }
 }
 
 function textColor(sentiment: PredictionMarket['sentiment']): string {
-  if (sentiment === 'positive') return 'text-emerald-400'
-  if (sentiment === 'negative') return 'text-red-400'
-  return 'text-zinc-400'
+  if (sentiment === 'positive') return 'var(--success-text)'
+  if (sentiment === 'negative') return 'var(--danger-text)'
+  return 'var(--text-secondary)'
 }
 
 function riskLabel(sentiment: PredictionMarket['sentiment'], pct: number): string {
@@ -60,24 +60,22 @@ export default function PredictionsView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Prediction Markets</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Live Polymarket odds for macro events</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🎯 Prediction Markets</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>Live Polymarket odds for macro events</div>
+          </div>
+          <button onClick={fetch_} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
+            <Activity size={13} />
+            {loading ? 'Fetching…' : 'Fetch Markets'}
+          </button>
         </div>
-        <button
-          onClick={fetch_}
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition"
-        >
-          <Activity size={13} />
-          {loading ? 'Fetching…' : 'Fetch Markets'}
-        </button>
       </div>
 
       {/* Backend not configured */}
       {!railwayUrl && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-800/50 bg-amber-900/20 p-4 text-sm text-amber-400">
+        <div className="flex items-center gap-2 rounded-xl p-4 text-sm" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
           <AlertTriangle size={15} className="shrink-0" />
           Backend not configured — add your Railway URL in Settings.
         </div>
@@ -85,7 +83,7 @@ export default function PredictionsView() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-4 text-sm text-red-400">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
@@ -94,11 +92,11 @@ export default function PredictionsView() {
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2 animate-pulse">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
-              <div className="h-4 w-3/4 rounded bg-zinc-800" />
-              <div className="h-8 w-20 rounded bg-zinc-800" />
-              <div className="h-2 w-full rounded-full bg-zinc-800" />
-              <div className="h-3 w-1/2 rounded bg-zinc-800/60" />
+            <div key={i} className="surface p-5 space-y-3">
+              <div className="h-4 w-3/4 rounded" style={{ background: 'var(--bg)' }} />
+              <div className="h-8 w-20 rounded" style={{ background: 'var(--bg)' }} />
+              <div className="h-2 w-full rounded-full" style={{ background: 'var(--bg)' }} />
+              <div className="h-3 w-1/2 rounded" style={{ background: 'var(--bg)' }} />
             </div>
           ))}
         </div>
@@ -106,10 +104,10 @@ export default function PredictionsView() {
 
       {/* Empty state */}
       {!loading && markets.length === 0 && !error && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-10 text-center">
-          <Activity size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No prediction market data loaded yet.</p>
-          <p className="text-xs text-zinc-600 mt-1">Click &ldquo;Fetch Markets&rdquo; to pull live Polymarket odds.</p>
+        <div className="surface p-10 text-center">
+          <Activity size={28} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No prediction market data loaded yet.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Click &ldquo;Fetch Markets&rdquo; to pull live Polymarket odds.</p>
         </div>
       )}
 
@@ -117,22 +115,19 @@ export default function PredictionsView() {
       {!loading && markets.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
           {markets.map((m, i) => {
-            const pct    = Math.round(Math.min(100, Math.max(0, m.probability * 100)))
-            const tColor = textColor(m.sentiment)
-            const bar    = barColor(m.sentiment, pct)
-            const label  = riskLabel(m.sentiment, pct)
+            const pct   = Math.round(Math.min(100, Math.max(0, m.probability * 100)))
+            const color = textColor(m.sentiment)
+            const bar   = barStyle(m.sentiment, pct)
+            const label = riskLabel(m.sentiment, pct)
             return (
-              <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
-                <p className="text-sm font-medium text-zinc-200 leading-snug">{m.event}</p>
-                <p className={`text-3xl font-bold tabular-nums ${tColor}`}>{pct}%</p>
+              <div key={i} className="surface p-5 space-y-3">
+                <p className="text-sm font-medium leading-snug" style={{ color: 'var(--text-primary)' }}>{m.event}</p>
+                <p className="text-3xl font-bold tabular-nums" style={{ color }}>{pct}%</p>
                 <div className="space-y-1">
-                  <div className="h-2 w-full rounded-full bg-zinc-800">
-                    <div
-                      className={`h-2 rounded-full transition-all ${bar}`}
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="progress-track w-full">
+                    <div className="progress-fill rounded-full transition-all" style={{ width: `${pct}%`, ...bar }} />
                   </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
                     <span>{label}</span>
                     {m.updatedAt && (
                       <div className="flex items-center gap-1">

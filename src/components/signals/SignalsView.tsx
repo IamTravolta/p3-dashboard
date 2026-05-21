@@ -91,46 +91,49 @@ export default function SignalsView() {
     }
   }, [load])
 
-  const verdictColor = (v: string) =>
-    v === 'BUY' ? 'text-emerald-400 bg-emerald-900/30' :
-    v === 'SELL' ? 'text-red-400 bg-red-900/30' : 'text-zinc-400 bg-zinc-800'
+  function verdictPillClass(v: string) {
+    return v === 'BUY' ? 'pill pill-success' : v === 'SELL' ? 'pill pill-danger' : 'pill pill-neutral'
+  }
 
-  const signalColor = (v: string) =>
-    v === 'BULLISH' ? 'text-emerald-400' :
-    v === 'BEARISH' ? 'text-red-400' : 'text-zinc-400'
+  function signalColor(v: string): string {
+    return v === 'BULLISH' ? 'var(--success-text)' : v === 'BEARISH' ? 'var(--danger-text)' : 'var(--text-secondary)'
+  }
 
-  const outcomeColor = (o: string | null) =>
-    o === 'CORRECT' ? 'text-emerald-400' : o === 'INCORRECT' ? 'text-red-400' : 'text-zinc-600'
+  function outcomeColor(o: string | null): string {
+    return o === 'CORRECT' ? 'var(--success-text)' : o === 'INCORRECT' ? 'var(--danger-text)' : 'var(--text-tertiary)'
+  }
+
+  function reliabilityBarColor(pct: number): string {
+    return pct >= 60 ? 'var(--success-text)' : pct >= 40 ? 'var(--warning-text)' : 'var(--danger-text)'
+  }
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-white">Signal History</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">All AI verdicts, module signals, and accuracy tracking</p>
+      {/* Header */}
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📡 Signal History</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>All AI verdicts, module signals, and accuracy tracking</div>
       </div>
 
       {/* Signal reliability */}
       {reliability.length > 0 && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+        <div className="surface p-4">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 size={14} className="text-indigo-400" />
-            <h3 className="text-sm font-medium text-zinc-300">Signal Reliability</h3>
+            <BarChart3 size={14} style={{ color: 'var(--primary)' }} />
+            <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Signal Reliability</h3>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {reliability.map((r) => {
               const acc = r.total_signals > 0 ? r.correct_signals / r.total_signals : 0
               const pct = Math.round(acc * 100)
               return (
-                <div key={r.module_name} className="rounded-lg bg-zinc-800/60 p-3">
-                  <p className="text-xs text-zinc-500 capitalize">{r.module_name}</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{pct}%</p>
-                  <div className="mt-2 h-1 w-full rounded-full bg-zinc-700">
-                    <div
-                      className={`h-1 rounded-full ${pct >= 60 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
-                      style={{ width: `${pct}%` }}
-                    />
+                <div key={r.module_name} className="rounded-lg p-3" style={{ background: 'var(--bg)' }}>
+                  <p className="text-xs capitalize" style={{ color: 'var(--text-tertiary)' }}>{r.module_name}</p>
+                  <p className="text-xl font-bold mt-0.5" style={{ color: 'var(--text-primary)' }}>{pct}%</p>
+                  <div className="mt-2 progress-track w-full">
+                    <div className="progress-fill rounded-full" style={{ width: `${pct}%`, background: reliabilityBarColor(pct) }} />
                   </div>
-                  <p className="text-xs text-zinc-600 mt-1">{r.correct_signals}/{r.total_signals} correct</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>{r.correct_signals}/{r.total_signals} correct</p>
                 </div>
               )
             })}
@@ -139,38 +142,38 @@ export default function SignalsView() {
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-zinc-500 text-sm">Loading…</div>
+        <div className="py-12 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>Loading…</div>
       ) : (
         <>
           {/* Verdicts */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Zap size={14} className="text-amber-400" />
-              <h3 className="text-sm font-medium text-zinc-300">Recent Verdicts</h3>
+              <Zap size={14} style={{ color: 'var(--yellow-text)' }} />
+              <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Recent Verdicts</h3>
               <div className="ml-auto flex items-center gap-2">
                 {evalStatus && (
-                  <span className={`text-xs ${evalStatus.startsWith('Failed') ? 'text-red-400' : 'text-emerald-400'}`}>
+                  <span className="text-xs" style={{ color: evalStatus.startsWith('Failed') ? 'var(--danger-text)' : 'var(--success-text)' }}>
                     {evalStatus}
                   </span>
                 )}
                 <button
                   onClick={evaluateOutcomes}
                   disabled={evalLoading}
-                  className="rounded border border-indigo-700 bg-transparent px-2.5 py-1 text-xs font-medium text-indigo-400 hover:bg-indigo-900/30 disabled:opacity-50 transition"
+                  className="btn disabled:opacity-50"
                 >
                   {evalLoading ? 'Evaluating…' : 'Evaluate Outcomes'}
                 </button>
               </div>
             </div>
             {verdicts.length === 0 ? (
-              <p className="text-sm text-zinc-600">No verdicts yet. Run an analysis from Portfolio or Watchlist.</p>
+              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No verdicts yet. Run an analysis from Portfolio or Watchlist.</p>
             ) : (
-              <div className="rounded-xl border border-zinc-800 overflow-hidden">
+              <div className="surface overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                    <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                       {['Ticker', 'Verdict', 'Score', 'Confidence', '30d', '60d', '90d', 'Date', ''].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
+                        <th key={h} className="px-4 py-2.5 text-left text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -179,24 +182,25 @@ export default function SignalsView() {
                       <>
                         <tr
                           key={v.id}
-                          className="border-b border-zinc-800/50 hover:bg-zinc-800/20 cursor-pointer transition"
+                          className="cursor-pointer transition"
+                          style={{ borderBottom: '0.5px solid var(--border)' }}
                           onClick={() => setActiveVerdict(activeVerdict === v.id ? null : v.id)}
                         >
-                          <td className="px-4 py-3 font-semibold text-white">{v.ticker}</td>
+                          <td className="px-4 py-3 font-semibold" style={{ color: 'var(--text-primary)' }}>{v.ticker}</td>
                           <td className="px-4 py-3">
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${verdictColor(v.verdict)}`}>{v.verdict}</span>
+                            <span className={verdictPillClass(v.verdict)}>{v.verdict}</span>
                           </td>
-                          <td className="px-4 py-3 font-mono text-white">{v.score.toFixed(1)}</td>
-                          <td className="px-4 py-3 text-zinc-400">{(v.confidence * 100).toFixed(0)}%</td>
-                          <td className={`px-4 py-3 text-xs ${outcomeColor(v.outcome_30d)}`}>{v.outcome_30d ?? '—'}</td>
-                          <td className={`px-4 py-3 text-xs ${outcomeColor(v.outcome_60d)}`}>{v.outcome_60d ?? '—'}</td>
-                          <td className={`px-4 py-3 text-xs ${outcomeColor(v.outcome_90d)}`}>{v.outcome_90d ?? '—'}</td>
-                          <td className="px-4 py-3 text-xs text-zinc-500">{new Date(v.generated_at).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-zinc-600 text-xs">↕</td>
+                          <td className="px-4 py-3 font-mono" style={{ color: 'var(--text-primary)' }}>{v.score.toFixed(1)}</td>
+                          <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{(v.confidence * 100).toFixed(0)}%</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: outcomeColor(v.outcome_30d) }}>{v.outcome_30d ?? '—'}</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: outcomeColor(v.outcome_60d) }}>{v.outcome_60d ?? '—'}</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: outcomeColor(v.outcome_90d) }}>{v.outcome_90d ?? '—'}</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>{new Date(v.generated_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>↕</td>
                         </tr>
                         {activeVerdict === v.id && (
-                          <tr key={`${v.id}-detail`} className="border-b border-zinc-800">
-                            <td colSpan={9} className="px-4 py-3 text-sm text-zinc-300 bg-zinc-800/30 leading-relaxed">
+                          <tr key={`${v.id}-detail`} style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg)' }}>
+                            <td colSpan={9} className="px-4 py-3 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                               {v.reasoning}
                             </td>
                           </tr>
@@ -213,26 +217,26 @@ export default function SignalsView() {
           {signals.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Activity size={14} className="text-indigo-400" />
-                <h3 className="text-sm font-medium text-zinc-300">Recent Module Signals</h3>
+                <Activity size={14} style={{ color: 'var(--primary)' }} />
+                <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Recent Module Signals</h3>
               </div>
-              <div className="rounded-xl border border-zinc-800 overflow-hidden">
+              <div className="surface overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                    <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                       {['Ticker', 'Module', 'Signal', 'Confidence', 'Date'].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-zinc-500">{h}</th>
+                        <th key={h} className="px-4 py-2.5 text-left text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {signals.map((s) => (
-                      <tr key={s.id} className="border-b border-zinc-800/40 hover:bg-zinc-800/20 transition">
-                        <td className="px-4 py-2.5 font-semibold text-white">{s.ticker}</td>
-                        <td className="px-4 py-2.5 text-xs text-zinc-400 capitalize">{s.module_name}</td>
-                        <td className={`px-4 py-2.5 text-xs font-medium ${signalColor(s.value)}`}>{s.value}</td>
-                        <td className="px-4 py-2.5 text-xs text-zinc-500">{(s.confidence * 100).toFixed(0)}%</td>
-                        <td className="px-4 py-2.5 text-xs text-zinc-600">{new Date(s.generated_at).toLocaleDateString()}</td>
+                      <tr key={s.id} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                        <td className="px-4 py-2.5 font-semibold" style={{ color: 'var(--text-primary)' }}>{s.ticker}</td>
+                        <td className="px-4 py-2.5 text-xs capitalize" style={{ color: 'var(--text-secondary)' }}>{s.module_name}</td>
+                        <td className="px-4 py-2.5 text-xs font-medium" style={{ color: signalColor(s.value) }}>{s.value}</td>
+                        <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{(s.confidence * 100).toFixed(0)}%</td>
+                        <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-tertiary)' }}>{new Date(s.generated_at).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>

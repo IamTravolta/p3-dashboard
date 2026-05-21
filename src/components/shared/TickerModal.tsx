@@ -4,14 +4,17 @@ import { useEffect } from 'react'
 import { useDashboardStore } from '@/lib/store'
 
 function VerdictBadge({ verdict }: { verdict: string }) {
-  const colors: Record<string, string> = {
-    BUY:  'bg-emerald-900/80 text-emerald-300 border-emerald-700',
-    SELL: 'bg-red-900/80 text-red-300 border-red-700',
-    HOLD: 'bg-zinc-800 text-zinc-300 border-zinc-700',
+  const styleMap: Record<string, React.CSSProperties> = {
+    BUY:  { background: 'var(--success-bg)', color: 'var(--success-text)', border: '1px solid var(--success-text)' },
+    SELL: { background: 'var(--danger-bg)',  color: 'var(--danger-text)',  border: '1px solid var(--danger-text)'  },
+    HOLD: { background: 'var(--surface)',    color: 'var(--text-secondary)', border: '1px solid var(--border)'     },
   }
-  const cls = colors[verdict] ?? colors.HOLD
+  const s = styleMap[verdict] ?? styleMap.HOLD
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+      style={s}
+    >
       {verdict}
     </span>
   )
@@ -44,21 +47,36 @@ export default function TickerModal() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-40"
+        style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
         onClick={() => setTickerModalOpen(false)}
       />
 
       {/* Sliding panel */}
       <div
-        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[480px] flex-col border-l border-zinc-800 bg-zinc-900 shadow-2xl"
-        style={{ animation: 'slideInRight 0.2s ease-out' }}
+        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[480px] flex-col shadow-2xl"
+        style={{
+          borderLeft: '0.5px solid var(--border)',
+          background: 'var(--surface)',
+          animation: 'slideInRight 0.2s ease-out',
+        }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-          <span className="font-mono text-2xl font-bold text-white">{activeTicker}</span>
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '0.5px solid var(--border)' }}
+        >
+          <span className="font-mono text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            {activeTicker}
+          </span>
           <button
             onClick={() => setTickerModalOpen(false)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 p-1.5 text-zinc-400 hover:text-white transition"
+            className="rounded-lg p-1.5 transition"
+            style={{
+              border: '0.5px solid var(--border)',
+              background: 'var(--bg)',
+              color: 'var(--text-secondary)',
+            }}
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -70,7 +88,10 @@ export default function TickerModal() {
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto space-y-5 p-5">
           {/* TradingView chart */}
-          <div className="overflow-hidden rounded-xl border border-zinc-800">
+          <div
+            className="overflow-hidden rounded-xl"
+            style={{ border: '0.5px solid var(--border)' }}
+          >
             <iframe
               src={tvSrc}
               title={`${activeTicker} chart`}
@@ -84,30 +105,40 @@ export default function TickerModal() {
           </div>
 
           {/* Signal section */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Latest Signal</h3>
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{ border: '0.5px solid var(--border)', background: 'var(--bg)' }}
+          >
+            <h3
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              Latest Signal
+            </h3>
             {verdict ? (
               <>
                 <div className="flex items-center gap-3">
                   <VerdictBadge verdict={verdict.finalVerdict} />
-                  <span className="text-sm text-zinc-400">
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Confidence{' '}
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
                       {(verdict.confidence * 100).toFixed(0)}%
                     </span>
                   </span>
                 </div>
                 {verdict.reasoning && (
-                  <p className="text-sm text-zinc-400 leading-relaxed">{verdict.reasoning}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                    {verdict.reasoning}
+                  </p>
                 )}
                 {cache?.fetchedAt && (
-                  <p className="text-[11px] text-zinc-600">
+                  <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
                     Cached {new Date(cache.fetchedAt).toLocaleString()}
                   </p>
                 )}
               </>
             ) : (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
                 No analysis yet — run analysis from Watchlist or Portfolio
               </p>
             )}

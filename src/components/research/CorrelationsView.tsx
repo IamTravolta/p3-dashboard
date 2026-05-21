@@ -9,14 +9,14 @@ interface CorrelationData {
   matrix:  number[][]
 }
 
-function cellColor(val: number): string {
-  if (val >= 0.7)  return 'bg-emerald-900 text-emerald-300'
-  if (val >= 0.4)  return 'bg-emerald-950 text-emerald-400'
-  if (val >= 0.1)  return 'bg-zinc-800 text-zinc-400'
-  if (val >= -0.1) return 'bg-zinc-900 text-zinc-500'
-  if (val >= -0.4) return 'bg-red-950 text-red-500'
-  if (val >= -0.7) return 'bg-red-900/60 text-red-400'
-  return 'bg-red-900 text-red-300'
+function cellStyle(val: number): React.CSSProperties {
+  if (val >= 0.7)  return { background: 'var(--success-bg)', color: 'var(--success-text)' }
+  if (val >= 0.4)  return { background: '#0d2b1a', color: 'var(--success-text)', opacity: 0.8 }
+  if (val >= 0.1)  return { background: 'var(--surface)', color: 'var(--text-secondary)' }
+  if (val >= -0.1) return { background: 'var(--bg)', color: 'var(--text-tertiary)' }
+  if (val >= -0.4) return { background: '#1a0d0d', color: 'var(--danger-text)', opacity: 0.8 }
+  if (val >= -0.7) return { background: 'var(--danger-bg)', color: 'var(--danger-text)' }
+  return { background: '#4a1010', color: 'var(--danger-text)' }
 }
 
 export default function CorrelationsView() {
@@ -66,24 +66,22 @@ export default function CorrelationsView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Correlations</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Understand how your positions move together</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--teal-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--teal-text)' }}>🔗 Correlations</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--teal-text)', opacity: 0.85 }}>Understand how your positions move together</div>
+          </div>
+          <button onClick={calculate} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
+            <Grid3x3 size={13} />
+            {loading ? 'Calculating…' : 'Calculate'}
+          </button>
         </div>
-        <button
-          onClick={calculate}
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition"
-        >
-          <Grid3x3 size={13} />
-          {loading ? 'Calculating…' : 'Calculate'}
-        </button>
       </div>
 
       {/* Backend not configured */}
       {!railwayUrl && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-800/50 bg-amber-900/20 p-4 text-sm text-amber-400">
+        <div className="flex items-center gap-2 rounded-xl p-4 text-sm" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
           <AlertTriangle size={15} className="shrink-0" />
           Backend not configured — add your Railway URL in Settings.
         </div>
@@ -91,54 +89,54 @@ export default function CorrelationsView() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-4 text-sm text-red-400">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 flex items-center justify-center">
+        <div className="surface p-8 flex items-center justify-center">
           <div className="text-center">
-            <Grid3x3 size={24} className="mx-auto mb-3 text-indigo-400 animate-pulse" />
-            <p className="text-sm text-zinc-500">Computing correlation matrix…</p>
+            <Grid3x3 size={24} className="mx-auto mb-3 animate-pulse" style={{ color: 'var(--teal-text)' }} />
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Computing correlation matrix…</p>
           </div>
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !data && !error && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-10 text-center">
-          <Grid3x3 size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No correlation data yet.</p>
-          <p className="text-xs text-zinc-600 mt-1">Click &ldquo;Calculate&rdquo; to compute position correlations.</p>
+        <div className="surface p-10 text-center">
+          <Grid3x3 size={28} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No correlation data yet.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Click &ldquo;Calculate&rdquo; to compute position correlations.</p>
         </div>
       )}
 
-      {/* Legend */}
+      {/* Legend + Matrix */}
       {!loading && data && (
         <>
-          <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-500">
+          <div className="flex items-center gap-2 flex-wrap text-xs" style={{ color: 'var(--text-secondary)' }}>
             <span>Legend:</span>
             {[
-              { label: 'Strong +', cls: 'bg-emerald-900 text-emerald-300' },
-              { label: 'Mild +',   cls: 'bg-emerald-950 text-emerald-400' },
-              { label: 'Neutral',  cls: 'bg-zinc-800 text-zinc-400' },
-              { label: 'Mild −',   cls: 'bg-red-950 text-red-500' },
-              { label: 'Strong −', cls: 'bg-red-900 text-red-300' },
+              { label: 'Strong +', style: { background: 'var(--success-bg)', color: 'var(--success-text)' } },
+              { label: 'Mild +',   style: { background: '#0d2b1a', color: 'var(--success-text)', opacity: 0.8 } },
+              { label: 'Neutral',  style: { background: 'var(--surface)', color: 'var(--text-secondary)' } },
+              { label: 'Mild −',   style: { background: '#1a0d0d', color: 'var(--danger-text)', opacity: 0.8 } },
+              { label: 'Strong −', style: { background: 'var(--danger-bg)', color: 'var(--danger-text)' } },
             ].map((l) => (
-              <span key={l.label} className={`rounded px-2 py-0.5 ${l.cls}`}>{l.label}</span>
+              <span key={l.label} className="rounded px-2 py-0.5" style={l.style}>{l.label}</span>
             ))}
           </div>
 
           {/* Matrix */}
-          <div className="overflow-auto rounded-xl border border-zinc-800">
-            <table className="text-xs border-collapse">
+          <div className="overflow-auto surface">
+            <table className="text-xs border-collapse w-full">
               <thead>
                 <tr>
-                  <th className="p-2 bg-zinc-900/80 border-b border-r border-zinc-800 min-w-[60px]" />
+                  <th className="p-2 min-w-[60px]" style={{ borderBottom: '0.5px solid var(--border)', borderRight: '0.5px solid var(--border)', background: 'var(--bg)' }} />
                   {data.tickers.map((t) => (
-                    <th key={t} className="p-2 bg-zinc-900/80 border-b border-r border-zinc-800 text-zinc-400 font-semibold min-w-[64px] text-center">
+                    <th key={t} className="p-2 font-semibold min-w-[64px] text-center" style={{ borderBottom: '0.5px solid var(--border)', borderRight: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)' }}>
                       {t}
                     </th>
                   ))}
@@ -147,13 +145,14 @@ export default function CorrelationsView() {
               <tbody>
                 {data.matrix.map((row, ri) => (
                   <tr key={ri}>
-                    <td className="p-2 bg-zinc-900/60 border-b border-r border-zinc-800 font-semibold text-zinc-300 text-center">
+                    <td className="p-2 font-semibold text-center" style={{ borderBottom: '0.5px solid var(--border)', borderRight: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}>
                       {data.tickers[ri]}
                     </td>
                     {row.map((val, ci) => (
                       <td
                         key={ci}
-                        className={`p-2 border-b border-r border-zinc-800 text-center font-mono tabular-nums ${cellColor(val)}`}
+                        className="p-2 text-center font-mono tabular-nums"
+                        style={{ borderBottom: '0.5px solid var(--border)', borderRight: '0.5px solid var(--border)', ...cellStyle(val) }}
                         title={`${data.tickers[ri]} / ${data.tickers[ci]}: ${val.toFixed(3)}`}
                       >
                         {val.toFixed(2)}
@@ -165,7 +164,7 @@ export default function CorrelationsView() {
             </table>
           </div>
 
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
             Values range from −1 (perfectly inverse) to +1 (perfectly correlated). Diagonal is always 1.
           </p>
         </>

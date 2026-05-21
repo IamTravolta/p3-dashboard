@@ -15,7 +15,8 @@ export default function TickerChip({ ticker, className }: Props) {
         setActiveTicker(ticker)
         setTickerModalOpen(true)
       }}
-      className={`font-mono font-semibold text-indigo-400 hover:text-indigo-300 hover:underline transition ${className ?? ''}`}
+      className={`font-mono font-semibold hover:underline transition ${className ?? ''}`}
+      style={{ color: 'var(--primary)' }}
     >
       {ticker}
     </button>

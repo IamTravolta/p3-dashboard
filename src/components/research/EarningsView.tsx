@@ -14,16 +14,13 @@ interface EarningsResult {
   keyPhrases:  string[]
 }
 
-const healthColor = (s: number) =>
-  s >= 70 ? 'bg-emerald-500' : s >= 45 ? 'bg-amber-500' : 'bg-red-500'
-
-const healthTextColor = (s: number) =>
-  s >= 70 ? 'text-emerald-400' : s >= 45 ? 'text-amber-400' : 'text-red-400'
+const healthBarColor = (s: number) =>
+  s >= 70 ? 'var(--success-text)' : s >= 45 ? 'var(--warning-text)' : 'var(--danger-text)'
 
 const trendIcon: Record<Trend, { icon: string; color: string }> = {
-  UP:   { icon: '↑', color: 'text-emerald-400' },
-  FLAT: { icon: '→', color: 'text-zinc-400' },
-  DOWN: { icon: '↓', color: 'text-red-400' },
+  UP:   { icon: '↑', color: 'var(--success-text)' },
+  FLAT: { icon: '→', color: 'var(--text-secondary)' },
+  DOWN: { icon: '↓', color: 'var(--danger-text)' },
 }
 
 export default function EarningsView() {
@@ -64,24 +61,22 @@ export default function EarningsView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Earnings Analysis</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">AI-powered earnings transcript analysis</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📄 Earnings Analysis</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>AI-powered earnings transcript analysis</div>
+          </div>
+          <button onClick={analyze} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
+            <FileText size={13} />
+            {loading ? 'Analyzing…' : 'Analyze Earnings'}
+          </button>
         </div>
-        <button
-          onClick={analyze}
-          disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition"
-        >
-          <FileText size={13} />
-          {loading ? 'Analyzing…' : 'Analyze Earnings'}
-        </button>
       </div>
 
       {/* Backend not configured */}
       {!railwayUrl && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-800/50 bg-amber-900/20 p-4 text-sm text-amber-400">
+        <div className="flex items-center gap-2 rounded-xl p-4 text-sm" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
           <AlertTriangle size={15} className="shrink-0" />
           Backend not configured — add your Railway URL in Settings.
         </div>
@@ -89,7 +84,7 @@ export default function EarningsView() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-4 text-sm text-red-400">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
@@ -98,16 +93,12 @@ export default function EarningsView() {
       {loading && (
         <div className="space-y-3 animate-pulse">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
+            <div key={i} className="surface p-4 space-y-3">
               <div className="flex justify-between">
-                <div className="h-5 w-16 rounded bg-zinc-800" />
-                <div className="h-5 w-10 rounded bg-zinc-800" />
+                <div className="h-5 w-16 rounded" style={{ background: 'var(--bg)' }} />
+                <div className="h-5 w-10 rounded" style={{ background: 'var(--bg)' }} />
               </div>
-              <div className="h-1.5 w-full rounded-full bg-zinc-800" />
-              <div className="flex gap-4">
-                <div className="h-4 w-20 rounded bg-zinc-800/60" />
-                <div className="h-4 w-20 rounded bg-zinc-800/60" />
-              </div>
+              <div className="h-1.5 w-full rounded-full" style={{ background: 'var(--bg)' }} />
             </div>
           ))}
         </div>
@@ -115,10 +106,10 @@ export default function EarningsView() {
 
       {/* Empty state */}
       {!loading && results.length === 0 && !error && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-10 text-center">
-          <FileText size={28} className="mx-auto mb-3 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No earnings data yet.</p>
-          <p className="text-xs text-zinc-600 mt-1">Click &ldquo;Analyze Earnings&rdquo; to process your portfolio transcripts.</p>
+        <div className="surface p-10 text-center">
+          <FileText size={28} className="mx-auto mb-3" style={{ color: 'var(--text-tertiary)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No earnings data yet.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Click &ldquo;Analyze Earnings&rdquo; to process your portfolio transcripts.</p>
         </div>
       )}
 
@@ -130,24 +121,24 @@ export default function EarningsView() {
             const rev     = trendIcon[r.revenueTrend] ?? trendIcon.FLAT
             const eps     = trendIcon[r.epsTrend]     ?? trendIcon.FLAT
             return (
-              <div key={r.ticker} className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+              <div key={r.ticker} className="surface overflow-hidden">
                 {/* Summary row — always visible */}
                 <button
                   onClick={() => toggle(r.ticker)}
-                  className="w-full flex items-center gap-4 p-4 hover:bg-zinc-800/20 transition text-left"
+                  className="w-full flex items-center gap-4 p-4 transition text-left"
                 >
-                  <span className="text-base font-bold text-white w-14 shrink-0">{r.ticker}</span>
+                  <span className="text-base font-bold w-14 shrink-0" style={{ color: 'var(--text-primary)' }}>{r.ticker}</span>
 
                   {/* Health bar */}
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">Health Score</span>
-                      <span className={`text-xs font-bold ${healthTextColor(r.healthScore)}`}>{r.healthScore}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Health Score</span>
+                      <span className="text-xs font-bold" style={{ color: healthBarColor(r.healthScore) }}>{r.healthScore}</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-zinc-800">
+                    <div className="progress-track w-full">
                       <div
-                        className={`h-1.5 rounded-full ${healthColor(r.healthScore)}`}
-                        style={{ width: `${Math.min(100, r.healthScore)}%` }}
+                        className="progress-fill rounded-full"
+                        style={{ width: `${Math.min(100, r.healthScore)}%`, background: healthBarColor(r.healthScore) }}
                       />
                     </div>
                   </div>
@@ -155,14 +146,14 @@ export default function EarningsView() {
                   {/* Trend badges */}
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="text-xs text-center">
-                      <div className="text-zinc-600">Rev</div>
-                      <div className={`font-bold ${rev.color}`}>{rev.icon}</div>
+                      <div style={{ color: 'var(--text-tertiary)' }}>Rev</div>
+                      <div className="font-bold" style={{ color: rev.color }}>{rev.icon}</div>
                     </div>
                     <div className="text-xs text-center">
-                      <div className="text-zinc-600">EPS</div>
-                      <div className={`font-bold ${eps.color}`}>{eps.icon}</div>
+                      <div style={{ color: 'var(--text-tertiary)' }}>EPS</div>
+                      <div className="font-bold" style={{ color: eps.color }}>{eps.icon}</div>
                     </div>
-                    <div className="text-zinc-600 ml-1">
+                    <div style={{ color: 'var(--text-tertiary)' }} className="ml-1">
                       {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </div>
                   </div>
@@ -170,21 +161,21 @@ export default function EarningsView() {
 
                 {/* Expanded detail */}
                 {isOpen && (
-                  <div className="border-t border-zinc-800 px-4 py-3">
+                  <div className="px-4 py-3" style={{ borderTop: '0.5px solid var(--border)' }}>
                     {r.keyPhrases?.length > 0 ? (
                       <div>
-                        <p className="text-xs font-medium text-zinc-500 mb-2">Key Phrases from Transcript</p>
+                        <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Key Phrases from Transcript</p>
                         <ul className="space-y-1.5">
                           {r.keyPhrases.map((phrase, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
-                              <span className="text-indigo-500 shrink-0 mt-0.5">•</span>
+                            <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                              <span className="shrink-0 mt-0.5" style={{ color: 'var(--primary)' }}>•</span>
                               {phrase}
                             </li>
                           ))}
                         </ul>
                       </div>
                     ) : (
-                      <p className="text-sm text-zinc-600">No key phrases available.</p>
+                      <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No key phrases available.</p>
                     )}
                   </div>
                 )}

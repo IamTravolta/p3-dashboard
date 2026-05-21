@@ -10,7 +10,12 @@ interface SellPositionModalProps {
   position: Position
 }
 
-const INPUT_CLS = 'w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition'
+const inputStyle: React.CSSProperties = {
+  border: '0.5px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text-primary)',
+}
+const inputClass = 'w-full rounded-lg px-3 py-2 text-sm outline-none transition placeholder-zinc-500'
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -79,19 +84,31 @@ export default function SellPositionModal({ open, onClose, position }: SellPosit
     : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-2xl"
+        style={{ border: '0.5px solid var(--border)', background: 'var(--surface)' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+        <div
+          className="flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: '0.5px solid var(--border)' }}
+        >
           <div>
-            <h2 className="text-base font-semibold text-white">Sell Position</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Sell Position
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
               {position.ticker} · {position.shares} shares · avg {position.currency} {position.avgBuyPrice.toFixed(2)}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-white transition"
+            className="rounded-md p-1.5 transition"
+            style={{ color: 'var(--text-secondary)' }}
           >
             ✕
           </button>
@@ -100,7 +117,9 @@ export default function SellPositionModal({ open, onClose, position }: SellPosit
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Sell price */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-zinc-400">Sell price *</label>
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Sell price *
+            </label>
             <input
               required
               type="number"
@@ -109,11 +128,15 @@ export default function SellPositionModal({ open, onClose, position }: SellPosit
               value={sellPrice}
               onChange={(e) => setSellPrice(e.target.value)}
               placeholder="0.00"
-              className={INPUT_CLS}
+              className={inputClass}
+              style={inputStyle}
             />
             {pnl !== null && pnlPct !== null && !isNaN(pnl) && (
-              <p className={`text-xs font-mono mt-1 ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                Realised P&L: {pnl >= 0 ? '+' : ''}{pnl.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+              <p
+                className="text-xs font-mono mt-1"
+                style={{ color: pnl >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}
+              >
+                Realised P&amp;L: {pnl >= 0 ? '+' : ''}{pnl.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                 {' '}({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%)
               </p>
             )}
@@ -121,29 +144,38 @@ export default function SellPositionModal({ open, onClose, position }: SellPosit
 
           {/* Sell date */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-zinc-400">Sell date</label>
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Sell date
+            </label>
             <input
               type="date"
               value={sellDate}
               onChange={(e) => setSellDate(e.target.value)}
-              className={INPUT_CLS}
+              className={inputClass}
+              style={inputStyle}
             />
           </div>
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-zinc-400">Notes (optional)</label>
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Notes (optional)
+            </label>
             <textarea
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Reason for sale, exit thesis, lessons learnt…"
-              className={`${INPUT_CLS} resize-none`}
+              className={`${inputClass} resize-none`}
+              style={inputStyle}
             />
           </div>
 
           {error && (
-            <p className="rounded-lg bg-red-900/20 border border-red-800 px-3 py-2 text-sm text-red-400">
+            <p
+              className="rounded-lg px-3 py-2 text-sm"
+              style={{ background: 'var(--danger-bg)', border: '0.5px solid var(--danger-text)', color: 'var(--danger-text)' }}
+            >
               {error}
             </p>
           )}
@@ -152,14 +184,16 @@ export default function SellPositionModal({ open, onClose, position }: SellPosit
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
+              className="px-4 py-2 rounded-lg text-sm transition"
+              style={{ color: 'var(--text-secondary)' }}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-lg bg-red-700 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition"
+              className="px-5 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-50"
+              style={{ background: 'var(--danger-text)', color: '#fff' }}
             >
               {loading ? 'Recording…' : 'Record Sale'}
             </button>

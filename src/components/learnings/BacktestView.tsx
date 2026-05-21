@@ -60,22 +60,23 @@ export default function BacktestView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-lg font-semibold text-white">Backtest</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">Test your scoring model against historical data</p>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📈 Backtest</h1>
+        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Test your scoring model against historical data</div>
       </div>
 
       {/* Controls */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-4">
-        <h3 className="text-sm font-medium text-zinc-300 border-b border-zinc-800 pb-2">Configuration</h3>
+      <div className="surface p-5 space-y-4">
+        <h3 className="text-sm font-medium pb-2" style={{ color: 'var(--text-primary)', borderBottom: '0.5px solid var(--border)' }}>Configuration</h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-zinc-400">Timeframe</label>
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Timeframe</label>
             <select
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-              className={SELECT}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+              style={{ border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)' }}
             >
               <option value="30d">30 days</option>
               <option value="60d">60 days</option>
@@ -85,11 +86,12 @@ export default function BacktestView() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-zinc-400">Metric</label>
+            <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Metric</label>
             <select
               value={metric}
               onChange={(e) => setMetric(e.target.value as Metric)}
-              className={SELECT}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+              style={{ border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)' }}
             >
               <option value="Score">Score</option>
               <option value="Conviction">Conviction</option>
@@ -101,7 +103,7 @@ export default function BacktestView() {
         <button
           onClick={runBacktest}
           disabled={running}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition"
+          className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
         >
           {running
             ? <><RefreshCw size={14} className="animate-spin" /> Running…</>
@@ -111,7 +113,7 @@ export default function BacktestView() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {error}
         </div>
       )}
@@ -124,54 +126,48 @@ export default function BacktestView() {
             <StatCard
               label="Accuracy"
               value={`${result.summary.accuracy.toFixed(1)}%`}
-              color={result.summary.accuracy >= 55 ? 'text-emerald-400' : 'text-red-400'}
+              color={result.summary.accuracy >= 55 ? 'var(--success-text)' : 'var(--danger-text)'}
             />
-            <StatCard
-              label="Total signals"
-              value={String(result.summary.total_signals)}
-            />
+            <StatCard label="Total signals" value={String(result.summary.total_signals)} />
             <StatCard
               label="Avg return (BUY)"
               value={`${result.summary.avg_return_buy >= 0 ? '+' : ''}${result.summary.avg_return_buy.toFixed(2)}%`}
-              color={result.summary.avg_return_buy >= 0 ? 'text-emerald-400' : 'text-red-400'}
+              color={result.summary.avg_return_buy >= 0 ? 'var(--success-text)' : 'var(--danger-text)'}
             />
             <StatCard
               label="Avg return (SELL)"
               value={`${result.summary.avg_return_sell >= 0 ? '+' : ''}${result.summary.avg_return_sell.toFixed(2)}%`}
-              color={result.summary.avg_return_sell <= 0 ? 'text-emerald-400' : 'text-red-400'}
+              color={result.summary.avg_return_sell <= 0 ? 'var(--success-text)' : 'var(--danger-text)'}
             />
           </div>
 
           {/* Results table */}
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+          <div className="surface overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-zinc-800 text-zinc-500">
-                    <th className="px-4 py-2.5 text-left font-medium">Signal Date</th>
-                    <th className="px-4 py-2.5 text-left font-medium">Ticker</th>
-                    <th className="px-4 py-2.5 text-left font-medium">Signal Type</th>
-                    <th className="px-4 py-2.5 text-left font-medium">Verdict</th>
-                    <th className="px-4 py-2.5 text-right font-medium">30d Return</th>
-                    <th className="px-4 py-2.5 text-center font-medium">Correct?</th>
+                  <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
+                    {['Signal Date', 'Ticker', 'Signal Type', 'Verdict', '30d Return', 'Correct?'].map((h) => (
+                      <th key={h} className="px-4 py-2.5 text-left font-medium" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800/50">
+                <tbody>
                   {result.rows.map((row, i) => (
-                    <tr key={i} className="hover:bg-zinc-800/30 transition">
-                      <td className="px-4 py-2.5 text-zinc-400 tabular-nums">{row.signal_date}</td>
-                      <td className="px-4 py-2.5 font-mono font-semibold text-white">{row.ticker}</td>
-                      <td className="px-4 py-2.5 text-zinc-300">{row.signal_type}</td>
+                    <tr key={i} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                      <td className="px-4 py-2.5 tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.signal_date}</td>
+                      <td className="px-4 py-2.5 font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{row.ticker}</td>
+                      <td className="px-4 py-2.5" style={{ color: 'var(--text-secondary)' }}>{row.signal_type}</td>
                       <td className="px-4 py-2.5">
                         <VerdictPill verdict={row.verdict} />
                       </td>
-                      <td className={`px-4 py-2.5 text-right tabular-nums font-medium ${row.return_30d >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <td className="px-4 py-2.5 tabular-nums font-medium" style={{ color: row.return_30d >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                         {row.return_30d >= 0 ? '+' : ''}{row.return_30d.toFixed(2)}%
                       </td>
-                      <td className="px-4 py-2.5 text-center">
+                      <td className="px-4 py-2.5">
                         {row.correct
-                          ? <span className="text-emerald-400 font-medium">Yes</span>
-                          : <span className="text-red-400 font-medium">No</span>}
+                          ? <span className="font-medium" style={{ color: 'var(--success-text)' }}>Yes</span>
+                          : <span className="font-medium" style={{ color: 'var(--danger-text)' }}>No</span>}
                       </td>
                     </tr>
                   ))}
@@ -182,10 +178,10 @@ export default function BacktestView() {
         </div>
       ) : !running && !error ? (
         /* Empty state */
-        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 py-16 text-center">
+        <div className="surface py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
           <p className="text-3xl mb-3">📊</p>
-          <h3 className="text-base font-semibold text-white mb-1">No backtest results yet</h3>
-          <p className="text-sm text-zinc-500">Run a backtest to see how your signals performed</p>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No backtest results yet</h3>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Run a backtest to see how your signals performed</p>
         </div>
       ) : null}
     </div>
@@ -194,27 +190,17 @@ export default function BacktestView() {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) {
+function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-      <p className="text-xs text-zinc-500 mb-1">{label}</p>
-      <p className={`text-lg font-semibold tabular-nums ${color}`}>{value}</p>
+    <div className="kpi-card">
+      <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+      <p className="text-lg font-semibold tabular-nums" style={{ color: color ?? 'var(--text-primary)' }}>{value}</p>
     </div>
   )
 }
 
 function VerdictPill({ verdict }: { verdict: string }) {
   const v = verdict.toUpperCase()
-  const cls = v === 'BUY'
-    ? 'bg-emerald-900/40 text-emerald-300 border-emerald-800'
-    : v === 'SELL'
-    ? 'bg-red-900/40 text-red-300 border-red-800'
-    : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-  return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium border ${cls}`}>
-      {verdict}
-    </span>
-  )
+  const pillClass = v === 'BUY' ? 'pill pill-success' : v === 'SELL' ? 'pill pill-danger' : 'pill pill-neutral'
+  return <span className={pillClass}>{verdict}</span>
 }
-
-const SELECT = 'w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition'

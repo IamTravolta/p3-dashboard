@@ -90,7 +90,7 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
         <StatCard
           label="Total P&L"
           value={`${isPos ? '+' : ''}€${Math.abs(totalPnL).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
-          valueClass={isPos ? 'text-emerald-400' : 'text-red-400'}
+          color={isPos ? 'var(--success-text)' : 'var(--danger-text)'}
           sub={`${isPos ? '+' : ''}${totalPnLPct.toFixed(2)}%`}
         />
         <StatCard label="Positions" value={String(positions.length)} />
@@ -102,9 +102,9 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-white">Positions</h2>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Positions</h2>
           {isSyncing && (
-            <span className="text-xs text-indigo-400 flex items-center gap-1">
+            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--primary)' }}>
               <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
                 <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75" />
@@ -116,13 +116,13 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
         <div className="flex gap-2">
           <button
             onClick={() => loadPositions()}
-            className="rounded-md px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
+            className="btn rounded-md px-3 py-1.5 text-xs"
           >
             ↻ Refresh
           </button>
           <button
             onClick={() => { setEditTarget(undefined); setModalOpen(true) }}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition"
+            className="btn btn-primary rounded-md px-3 py-1.5 text-xs font-semibold"
           >
             + Add position
           </button>
@@ -135,10 +135,10 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
       ) : positions.length === 0 ? (
         <EmptyState onAdd={() => setModalOpen(true)} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900">
+        <div className="surface overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-xs font-medium text-zinc-500 uppercase tracking-wide">
+              <tr className="text-left text-xs font-medium uppercase tracking-wide" style={{ borderBottom: '0.5px solid var(--border)', color: 'var(--text-secondary)' }}>
                 <th className="px-4 py-3">Ticker</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Name</th>
                 <th className="px-4 py-3 text-right">Shares</th>
@@ -151,7 +151,7 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800/50">
+            <tbody>
               {positions.map((p) => {
                 const livePrice  = prices[p.ticker] ?? p.currentPrice
                 const value      = livePrice * p.shares
@@ -162,24 +162,24 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
                 const score      = calcScore(p.factorScores)
 
                 return (
-                  <tr key={p.id} className="group hover:bg-zinc-800/30 transition">
+                  <tr key={p.id} className="group transition" style={{ borderBottom: '0.5px solid var(--border)' }}>
                     <td className="px-4 py-3">
-                      <span className="font-mono font-semibold text-white">{p.ticker}</span>
-                      <div className="text-xs text-zinc-500">{p.exchange}</div>
+                      <span className="font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{p.ticker}</span>
+                      <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{p.exchange}</div>
                     </td>
-                    <td className="px-4 py-3 text-zinc-300 hidden sm:table-cell max-w-[160px] truncate">{p.name}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-zinc-300">{p.shares.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-zinc-400">€{p.avgBuyPrice.toFixed(2)}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell max-w-[160px] truncate" style={{ color: 'var(--text-secondary)' }}>{p.name}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-secondary)' }}>{p.shares.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-secondary)' }}>€{p.avgBuyPrice.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      <span className={`font-semibold ${hasLive ? 'text-white' : 'text-zinc-500'}`}>
+                      <span className="font-semibold" style={{ color: hasLive ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
                         €{livePrice.toFixed(2)}
                       </span>
-                      {hasLive && <div className="text-xs text-emerald-500/70">live</div>}
+                      {hasLive && <div className="text-xs" style={{ color: 'var(--success-text)', opacity: 0.7 }}>live</div>}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-white">
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-primary)' }}>
                       €{value.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
                     </td>
-                    <td className={`px-4 py-3 text-right tabular-nums font-medium ${positive ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <td className="px-4 py-3 text-right tabular-nums font-medium" style={{ color: positive ? 'var(--success-text)' : 'var(--danger-text)' }}>
                       {positive ? '+' : ''}{pnlPct.toFixed(1)}%
                       <div className="text-xs opacity-75">{positive ? '+' : ''}€{Math.abs(pnl).toFixed(0)}</div>
                     </td>
@@ -193,7 +193,8 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                         <button
                           onClick={() => openEdit(p)}
-                          className="rounded px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-white transition"
+                          className="rounded px-2 py-1 text-xs transition"
+                          style={{ color: 'var(--text-secondary)' }}
                         >
                           Edit
                         </button>
@@ -201,14 +202,16 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
                           <button
                             onClick={() => handleDelete(p.id)}
                             disabled={deleting}
-                            className="rounded px-2 py-1 text-xs bg-red-900/50 text-red-300 hover:bg-red-800 transition"
+                            className="rounded px-2 py-1 text-xs transition"
+                            style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)' }}
                           >
                             {deleting ? '…' : 'Confirm'}
                           </button>
                         ) : (
                           <button
                             onClick={() => setDeleteConfirm(p.id)}
-                            className="rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-700 hover:text-red-400 transition"
+                            className="rounded px-2 py-1 text-xs transition"
+                            style={{ color: 'var(--text-tertiary)' }}
                           >
                             ✕
                           </button>
@@ -267,32 +270,37 @@ function calcScore(fs: FactorScores): number {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, valueClass = 'text-white' }: {
-  label: string; value: string; sub?: string; valueClass?: string
+function StatCard({ label, value, sub, color }: {
+  label: string; value: string; sub?: string; color?: string
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
-      <p className="text-xs text-zinc-500 mb-1">{label}</p>
-      <p className={`text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
-      {sub && <p className="text-xs text-zinc-500">{sub}</p>}
+    <div className="kpi-card">
+      <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+      <p className="text-lg font-bold tabular-nums" style={{ color: color ?? 'var(--text-primary)' }}>{value}</p>
+      {sub && <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{sub}</p>}
     </div>
   )
 }
 
 function ConvictionBadge({ level }: { level: number }) {
-  const colors = ['', 'bg-red-900/50 text-red-300', 'bg-orange-900/50 text-orange-300',
-    'bg-yellow-900/50 text-yellow-300', 'bg-emerald-900/50 text-emerald-300', 'bg-indigo-900/50 text-indigo-300']
+  const styleMap: Record<number, React.CSSProperties> = {
+    1: { background: 'var(--danger-bg)', color: 'var(--danger-text)' },
+    2: { background: 'var(--warning-bg)', color: 'var(--warning-text)' },
+    3: { background: 'var(--yellow-bg)', color: 'var(--yellow-text)' },
+    4: { background: 'var(--success-bg)', color: 'var(--success-text)' },
+    5: { background: 'var(--info-bg)', color: 'var(--info-text)' },
+  }
   const labels = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High']
   return (
-    <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${colors[level] ?? ''}`}>
+    <span className="inline-block rounded px-1.5 py-0.5 text-xs font-medium" style={styleMap[level] ?? {}}>
       {labels[level] ?? level}
     </span>
   )
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 7 ? 'text-emerald-400' : score >= 5 ? 'text-yellow-400' : 'text-red-400'
-  return <span className={`font-mono text-sm font-semibold ${color}`}>{score.toFixed(1)}</span>
+  const color = score >= 7 ? 'var(--success-text)' : score >= 5 ? 'var(--yellow-text)' : 'var(--danger-text)'
+  return <span className="font-mono text-sm font-semibold" style={{ color }}>{score.toFixed(1)}</span>
 }
 
 function SectorBreakdown({ positions, prices }: { positions: Position[]; prices: Record<string, number> }) {
@@ -308,18 +316,18 @@ function SectorBreakdown({ positions, prices }: { positions: Position[]; prices:
   const sorted = Object.entries(sectors).sort((a, b) => b[1] - a[1])
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-3">Sector breakdown</h3>
+    <div className="surface p-4">
+      <h3 className="text-xs font-medium uppercase tracking-wide mb-3" style={{ color: 'var(--text-secondary)' }}>Sector breakdown</h3>
       <div className="space-y-2">
         {sorted.map(([sector, val]) => {
           const pct = total > 0 ? (val / total) * 100 : 0
           return (
             <div key={sector} className="flex items-center gap-3">
-              <span className="text-xs text-zinc-400 w-40 truncate shrink-0">{sector}</span>
-              <div className="flex-1 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-                <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+              <span className="text-xs w-40 truncate shrink-0" style={{ color: 'var(--text-secondary)' }}>{sector}</span>
+              <div className="progress-track flex-1">
+                <div className="progress-fill rounded-full transition-all" style={{ width: `${pct}%`, background: 'var(--primary)' }} />
               </div>
-              <span className="text-xs tabular-nums text-zinc-400 w-10 text-right">{pct.toFixed(0)}%</span>
+              <span className="text-xs tabular-nums w-10 text-right" style={{ color: 'var(--text-secondary)' }}>{pct.toFixed(0)}%</span>
             </div>
           )
         })}
@@ -330,12 +338,12 @@ function SectorBreakdown({ positions, prices }: { positions: Position[]; prices:
 
 function LoadingSkeleton() {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 space-y-3">
+    <div className="surface p-4 space-y-3">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="flex gap-4 animate-pulse">
-          <div className="h-4 bg-zinc-800 rounded w-16" />
-          <div className="h-4 bg-zinc-800 rounded flex-1" />
-          <div className="h-4 bg-zinc-800 rounded w-20" />
+          <div className="h-4 rounded w-16" style={{ background: 'var(--bg)' }} />
+          <div className="h-4 rounded flex-1" style={{ background: 'var(--bg)' }} />
+          <div className="h-4 rounded w-20" style={{ background: 'var(--bg)' }} />
         </div>
       ))}
     </div>
@@ -344,16 +352,16 @@ function LoadingSkeleton() {
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/50 py-16 text-center">
+    <div className="surface py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
       <p className="text-3xl mb-3">📭</p>
-      <h3 className="text-base font-semibold text-white mb-1">No positions yet</h3>
-      <p className="text-sm text-zinc-500 mb-4">
+      <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No positions yet</h3>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
         Add your first position or{' '}
-        <a href="/migrate" className="text-indigo-400 hover:underline">import from your existing dashboard</a>.
+        <a href="/migrate" style={{ color: 'var(--primary)' }} className="hover:underline">import from your existing dashboard</a>.
       </p>
       <button
         onClick={onAdd}
-        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition"
+        className="btn btn-primary"
       >
         + Add first position
       </button>
