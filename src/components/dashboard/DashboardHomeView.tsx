@@ -407,6 +407,15 @@ export default function DashboardHomeView() {
         </div>
       </div>
 
+      {/* ── A2: Macro Regime Banner ────────────────────────────────────────── */}
+      <div className="rounded p-3 flex items-center gap-3 flex-wrap" style={{ background: 'var(--info-bg)', border: '0.5px solid var(--border)' }}>
+        <span className="text-xs font-semibold" style={{ color: 'var(--info-text)' }}>🌐 Macro Regime</span>
+        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+          Connect je Railway backend en sync om live macro-regime data te laden (Fed stance, earnings season, volatility index).
+        </span>
+        <span className="pill pill-info" style={{ fontSize: 10, marginLeft: 'auto' }}>Pending sync</span>
+      </div>
+
       {/* ── B: Heatmap ────────────────────────────────────────────────────── */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
         {/* Header row */}
@@ -471,6 +480,32 @@ export default function DashboardHomeView() {
               )
             })}
           </div>
+        )}
+
+        {/* Collapsible legenda — mirrors HTML #heatmap-legenda */}
+        {positions.length > 0 && (
+          <details className="mt-3" style={{ border: '0.5px solid var(--border)', borderRadius: 6 }}>
+            <summary
+              className="px-3 py-2 text-xs font-semibold cursor-pointer select-none"
+              style={{ color: 'var(--text-secondary)', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span>📖 Score legenda — wat betekenen Q / G / V / M / S?</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>⌄</span>
+            </summary>
+            <div className="px-3 py-3" style={{ borderTop: '0.5px solid var(--border)' }}>
+              <div className="space-y-1.5 text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                <div>De <strong style={{ color: 'var(--text-primary)' }}>Score</strong> van 0–100 is een gemiddelde van 5 factoren. Dezelfde 85 kan een groei-aandeel zijn of een waarde-aandeel — kijk altijd naar de breakdown.</div>
+                <div><strong style={{ color: 'var(--success-text)' }}>Q (Quality, 0–100):</strong> hoe sterk staat het bedrijf financieel? Hoge marges, lage schuld, hoog ROIC. Hoog = veilig bedrijf.</div>
+                <div><strong style={{ color: 'var(--info-text)' }}>G (Growth, 0–100):</strong> hoe snel groeit het bedrijf? Omzet- en winstgroei. Hoog = snel groeiend (zoals NVDA).</div>
+                <div><strong style={{ color: 'var(--yellow-text)' }}>V (Value, 0–100):</strong> hoe goedkoop is het aandeel t.o.v. fundamentele waarde? Lage P/E etc. Hoog = goedkoop geprijsd.</div>
+                <div><strong style={{ color: 'var(--primary)' }}>M (Momentum, 0–100):</strong> zit de koers in een opwaartse trend? Hoog = stijgend, actief gekocht.</div>
+                <div><strong style={{ color: 'var(--purple-text)' }}>S (Sentiment, 0–100):</strong> wat is de mediaperceptie? Analist-upgrades, positief nieuws. Hoog = goed verhaal.</div>
+                <div className="mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                  <em>Voorbeeld: Q 90 + V 40 = sterk bedrijf maar duur. Q 50 + V 95 = goedkoop maar wankel. Beide kunnen 70 totaalscore zijn maar zijn totaal ander type investering.</em>
+                </div>
+              </div>
+            </div>
+          </details>
         )}
       </div>
 
@@ -587,7 +622,7 @@ export default function DashboardHomeView() {
               }}
               onClick={() => {
                 setActiveGroup('portfolio')
-                setActiveSubTab('watch-to-sell')
+                setActiveSubTab('positions')
               }}
             >
               View all →
