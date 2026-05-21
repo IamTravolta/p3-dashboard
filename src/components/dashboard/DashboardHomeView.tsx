@@ -1,6 +1,7 @@
 'use client'
 
 import { useDashboardStore } from '@/lib/store'
+import { usePortfolioData } from '@/hooks/usePortfolioData'
 import type { Position, WatchlistItem } from '@/lib/types/database'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -255,13 +256,16 @@ function WatchToSellPreview({ positions, prices }: { positions: Position[]; pric
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function DashboardHomeView() {
-  const positions    = useDashboardStore((s) => s.positions)
-  const watchlist    = useDashboardStore((s) => s.watchlist)
-  const prices       = useDashboardStore((s) => s.prices)
-  const cash         = useDashboardStore((s) => s.cash)
-  const computeStats = useDashboardStore((s) => s.computeStats)
-  const setActiveGroup  = useDashboardStore((s) => s.setActiveGroup)
-  const setActiveSubTab = useDashboardStore((s) => s.setActiveSubTab)
+  const positions         = useDashboardStore((s) => s.positions)
+  const watchlist         = useDashboardStore((s) => s.watchlist)
+  const prices            = useDashboardStore((s) => s.prices)
+  const cash              = useDashboardStore((s) => s.cash)
+  const computeStats      = useDashboardStore((s) => s.computeStats)
+  const isSyncing         = useDashboardStore((s) => s.isSyncing)
+  const pricesLastFetched = useDashboardStore((s) => s.pricesLastFetched)
+  const setActiveGroup    = useDashboardStore((s) => s.setActiveGroup)
+  const setActiveSubTab   = useDashboardStore((s) => s.setActiveSubTab)
+  const { refreshPrices } = usePortfolioData()
 
   // Recompute stats on mount so KPIs are correct after page reload
   // (stats is not persisted, so it starts null after localStorage rehydration)
@@ -517,7 +521,30 @@ export default function DashboardHomeView() {
             <h2 className="text-sm font-semibold" style={{ color: 'var(--info-text)' }}>
               ◇ Positions
             </h2>
-            <span className="pill pill-success" style={{ fontSize: 10 }}>⚡ Live mode on</span>
+            {/* Live indicator */}
+            <span className="flex items-center gap-1.5 pill pill-success" style={{ fontSize: 10 }}>
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: 'var(--success-text)', animation: isSyncing ? 'pulse 1s infinite' : undefined }}
+              />
+              {isSyncing ? 'Updating…' : '⚡ Live — 30s'}
+            </span>
+            {/* Last updated */}
+            {pricesLastFetched && (
+              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                Updated {Math.floor((Date.now() - pricesLastFetched) / 1000)}s ago
+              </span>
+            )}
+            {/* Manual refresh */}
+            <button
+              onClick={() => refreshPrices(positions)}
+              disabled={isSyncing}
+              className="text-xs disabled:opacity-40"
+              style={{ color: 'var(--info-text)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+              title="Force refresh prices"
+            >
+              ↺
+            </button>
           </div>
           {/* Color legend */}
           <div

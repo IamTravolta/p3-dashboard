@@ -29,7 +29,7 @@ function rowToPosition(row: PositionRow): Position {
   }
 }
 
-const PRICE_REFRESH_INTERVAL = 60_000   // 1 minute
+const PRICE_REFRESH_INTERVAL = 30_000   // 30 seconds
 
 export function usePortfolioData() {
   const positions    = useDashboardStore((s) => s.positions)
@@ -37,10 +37,12 @@ export function usePortfolioData() {
   const setPrices    = useDashboardStore((s) => s.setPrices)
   const setLoading   = useDashboardStore((s) => s.setLoading)
   const setSyncing   = useDashboardStore((s) => s.setSyncing)
-  const pricesLastFetched = useDashboardStore((s) => s.pricesLastFetched)
   const addAlert     = useDashboardStore((s) => s.addAlert)
 
-  const priceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Always-fresh ref — interval callback reads this instead of closing over stale state
+  const positionsRef   = useRef<Position[]>(positions)
+  positionsRef.current = positions
 
   // ── Load positions from Supabase ────────────────────────────────────────────
   const loadPositions = useCallback(async () => {
@@ -58,13 +60,10 @@ export function usePortfolioData() {
   }, [setLoading, setPositions])
 
   // ── Refresh live prices via server-side proxy ───────────────────────────────
-  // The /api/prices route calls Stooq server-side (using the user's local machine IP
-  // on dev, or their production server IP). This avoids browser CORS restrictions.
   const refreshPrices = useCallback(async (pos: Position[]) => {
     if (pos.length === 0) return
     setSyncing(true)
     try {
-      // Build "TICKER:EXCHANGE" list for the API route
       const tickerParam = pos
         .map((p) => p.exchange ? `${p.ticker}:${p.exchange}` : p.ticker)
         .join(',')
@@ -81,7 +80,7 @@ export function usePortfolioData() {
         setPrices(prices, prevPrices ?? {})
       }
 
-      // Check for stop-loss threshold crossings
+      // Stop-loss alerts
       const existingAlerts = useDashboardStore.getState().alerts
       for (const p of pos) {
         const livePrice = prices[p.ticker]
@@ -106,32 +105,37 @@ export function usePortfolioData() {
     }
   }, [setSyncing, setPrices, addAlert])
 
-  // ── On mount: load positions then immediately fetch prices ──────────────────
+  // ── Load positions on mount ─────────────────────────────────────────────────
   useEffect(() => {
     loadPositions()
   }, [loadPositions])
 
-  // ── Once positions are loaded, start the price refresh loop ─────────────────
+  // ── Start price polling once positions are available ────────────────────────
+  // Uses a ref for positions so the interval never closes over stale data and
+  // never needs to be recreated when positions/pricesLastFetched change.
   useEffect(() => {
     if (positions.length === 0) return
 
-    // Fetch immediately if stale (>1 min old) or never fetched
-    const now = Date.now()
-    const stale = !pricesLastFetched || (now - pricesLastFetched) > PRICE_REFRESH_INTERVAL
-    if (stale) {
-      refreshPrices(positions)
-    }
+    // Fetch immediately on first mount
+    refreshPrices(positionsRef.current)
 
-    // Set up recurring refresh
-    if (priceTimerRef.current) clearInterval(priceTimerRef.current)
-    priceTimerRef.current = setInterval(() => {
-      refreshPrices(positions)
+    // Clear any stale interval before starting a new one
+    if (timerRef.current) clearInterval(timerRef.current)
+
+    timerRef.current = setInterval(() => {
+      refreshPrices(positionsRef.current)
     }, PRICE_REFRESH_INTERVAL)
 
     return () => {
-      if (priceTimerRef.current) clearInterval(priceTimerRef.current)
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
     }
-  }, [positions, pricesLastFetched, refreshPrices])
+  // Intentionally only depends on positions.length — we don't want the interval
+  // to restart every time pricesLastFetched changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positions.length, refreshPrices])
 
   return { loadPositions, refreshPrices }
 }
