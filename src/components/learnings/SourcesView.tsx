@@ -18,7 +18,14 @@ const INITIAL_SOURCES: DataSource[] = [
   {
     id:          'stooq',
     name:        'Stooq',
-    description: 'End-of-day and intraday price data for stocks and ETFs',
+    description: 'Primary price source — end-of-day and intraday. Fallback to FMP when Stooq returns N/D (datacenter IP blocking)',
+    status:      'CHECKING',
+    lastChecked: null,
+  },
+  {
+    id:          'fmp',
+    name:        'Financial Modeling Prep (FMP)',
+    description: 'Fallback price source for NASDAQ/NYSE when Stooq is unavailable from server. Free tier: single-symbol quotes',
     status:      'CHECKING',
     lastChecked: null,
   },
@@ -68,10 +75,20 @@ export default function SourcesView() {
 
     const now = new Date().toISOString()
 
-    // Check Stooq
-    const stooqPromise = fetch('/api/prices?tickers=AAPL.US')
-      .then((r) => (r.ok ? 'CONNECTED' : 'ERROR') as SourceStatus)
-      .catch(() => 'ERROR' as SourceStatus)
+    // Check Stooq + FMP via unified /api/prices endpoint
+    const pricePromise = fetch('/api/prices?tickers=AAPL.US')
+      .then(async (r) => {
+        if (!r.ok) return { stooq: 'ERROR' as SourceStatus, fmp: 'ERROR' as SourceStatus }
+        const j = await r.json()
+        const meta = j.meta ?? {}
+        const aaplMeta = meta['AAPL'] ?? meta['AAPL.US'] ?? {}
+        const stooqUsed = aaplMeta.source === 'stooq'
+        return {
+          stooq: (stooqUsed ? 'CONNECTED' : 'NOT CONFIGURED') as SourceStatus,
+          fmp:   (!stooqUsed && j.prices?.AAPL > 0 ? 'CONNECTED' : stooqUsed ? 'NOT CONFIGURED' : 'ERROR') as SourceStatus,
+        }
+      })
+      .catch(() => ({ stooq: 'ERROR' as SourceStatus, fmp: 'ERROR' as SourceStatus }))
 
     // Check Railway (and derive Polymarket/SEC from it)
     const railwayPromise = fetch('/api/railway/health')
@@ -81,12 +98,13 @@ export default function SourcesView() {
       })
       .catch(() => 'ERROR' as SourceStatus)
 
-    const [stooqStatus, railwayStatus] = await Promise.all([stooqPromise, railwayPromise])
+    const [{ stooq: stooqStatus, fmp: fmpStatus }, railwayStatus] = await Promise.all([pricePromise, railwayPromise])
 
     setSources((prev) =>
       prev.map((s) => {
         if (s.id === 'supabase') return s
         if (s.id === 'stooq')    return { ...s, status: stooqStatus,   lastChecked: now }
+        if (s.id === 'fmp')      return { ...s, status: fmpStatus,     lastChecked: now }
         if (s.id === 'railway')  return { ...s, status: railwayStatus, lastChecked: now }
         // Polymarket and SEC depend on Railway
         if (s.via === 'Railway') return { ...s, status: railwayStatus, lastChecked: now }

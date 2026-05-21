@@ -69,6 +69,11 @@ export default function PaperTradesView() {
   }
 
   const totalRealised = closed.reduce((sum, t) => sum + pnl(t), 0)
+  const winners       = closed.filter((t) => pnl(t) > 0).length
+  const winRate       = closed.length > 0 ? (winners / closed.length) * 100 : 0
+  const avgReturn     = closed.length > 0
+    ? closed.reduce((sum, t) => sum + pnlPct(t), 0) / closed.length
+    : 0
 
   return (
     <div className="space-y-5">
@@ -91,14 +96,21 @@ export default function PaperTradesView() {
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Open trades"   value={open.length.toString()} />
-        <StatCard label="Closed trades" value={closed.length.toString()} />
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label="Open trades"      value={open.length.toString()} />
+        <StatCard label="Closed trades"    value={closed.length.toString()} />
         <StatCard
-          label="Total realised P&L"
-          value={`€${totalRealised.toFixed(0)}`}
-          color={totalRealised >= 0 ? 'var(--success-text)' : 'var(--danger-text)'}
+          label="Win rate"
+          value={closed.length > 0 ? `${winRate.toFixed(0)}%` : '—'}
+          color={winRate >= 55 ? 'var(--success-text)' : winRate >= 45 ? 'var(--yellow-text)' : closed.length > 0 ? 'var(--danger-text)' : undefined}
+          sub={closed.length > 0 ? `${winners}/${closed.length} wins` : 'geen data'}
+        />
+        <StatCard
+          label="Gem. rendement"
+          value={closed.length > 0 ? `${avgReturn >= 0 ? '+' : ''}${avgReturn.toFixed(1)}%` : '—'}
+          color={avgReturn >= 0 ? 'var(--success-text)' : 'var(--danger-text)'}
+          sub={closed.length > 0 ? `Totaal €${totalRealised.toFixed(0)}` : undefined}
         />
       </div>
 
@@ -207,11 +219,12 @@ export default function PaperTradesView() {
 }
 
 /* ── Stat card ─────────────────────────────────────────────────────────────── */
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
+function StatCard({ label, value, color, sub }: { label: string; value: string; color?: string; sub?: string }) {
   return (
     <div className="kpi-card">
       <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{label}</p>
       <p className="text-xl font-bold mt-0.5" style={{ color: color ?? 'var(--text-primary)' }}>{value}</p>
+      {sub && <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{sub}</p>}
     </div>
   )
 }

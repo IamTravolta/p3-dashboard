@@ -328,9 +328,78 @@ export default function SizingView() {
         </div>
       )}
 
+      {/* Kelly conviction-to-size reference table */}
+      <div className="surface px-5 py-5">
+        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Kelly Conviction → Positiegrootte</h3>
+        <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
+          Referentietabel: conviction-score bepaalt maximale positiegrootte via fractional Kelly. Hogere overtuiging = meer risicovermogen.
+        </p>
+        <div className="overflow-x-auto mb-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
+                {['Conviction', 'Label', 'Max size', 'Kelly fraction', 'Gebruik wanneer'].map((h) => (
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { conv: 1, label: 'Speculatief', size: '2%',  kelly: '0.20 f', when: 'Idee, weinig bewijs, eerste positie' },
+                { conv: 2, label: 'Laag',        size: '3%',  kelly: '0.25 f', when: 'Redelijke basis, nog onzekerheid' },
+                { conv: 3, label: 'Gemiddeld',   size: '5%',  kelly: '0.35 f', when: 'Solide thesis + 1-2 bevestigende signalen' },
+                { conv: 4, label: 'Hoog',        size: '7%',  kelly: '0.50 f', when: 'Meerdere signalen groen + insider / smart money' },
+                { conv: 5, label: 'Max',         size: '10%', kelly: '0.75 f', when: 'Hoogste overtuiging — zelden, max 1–2 posities' },
+              ].map((row) => (
+                <tr key={row.conv} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                  <td className="px-3 py-2.5 text-center">
+                    <div className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
+                      style={{
+                        background: row.conv >= 4 ? 'var(--success-bg)' : row.conv === 3 ? 'var(--info-bg)' : 'var(--surface)',
+                        color: row.conv >= 4 ? 'var(--success-text)' : row.conv === 3 ? 'var(--info-text)' : 'var(--text-secondary)',
+                        border: '0.5px solid var(--border)',
+                      }}
+                    >{row.conv}</div>
+                  </td>
+                  <td className="px-3 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{row.label}</td>
+                  <td className="px-3 py-2.5 text-xs font-mono font-bold"
+                    style={{ color: row.conv >= 4 ? 'var(--success-text)' : row.conv === 3 ? 'var(--info-text)' : 'var(--text-secondary)' }}>
+                    {row.size}
+                  </td>
+                  <td className="px-3 py-2.5 text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>{row.kelly}</td>
+                  <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{row.when}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Capacity gauges */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          {[
+            { label: 'Conv 5 (max 1)', count: positions.filter(p => p.conviction >= 5).length, max: 2 },
+            { label: 'Conv 4+ (≤4)', count: positions.filter(p => p.conviction >= 4).length, max: 4 },
+            { label: 'Conv 3+ (core)', count: positions.filter(p => p.conviction >= 3).length, max: 10 },
+            { label: 'Conv 1–2 (spec)', count: positions.filter(p => p.conviction <= 2).length, max: 5 },
+          ].map((g) => {
+            const pct = Math.min((g.count / g.max) * 100, 100)
+            const color = pct >= 100 ? 'var(--danger-text)' : pct >= 75 ? 'var(--warning-text)' : 'var(--success-text)'
+            return (
+              <div key={g.label} className="kpi-card">
+                <div className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>{g.label}</div>
+                <div className="text-lg font-bold" style={{ color }}>{g.count}<span className="text-xs font-normal ml-1" style={{ color: 'var(--text-tertiary)' }}>/ {g.max}</span></div>
+                <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Kelly Criterion */}
       <div className="surface px-5 py-5">
-        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Kelly Criterion Sizing</h3>
+        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Kelly AI Sizing (Railway)</h3>
         <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
           AI-powered optimal position sizing based on your historical win rates, conviction
           scores, and correlation matrix. Uses the Kelly formula adjusted for your risk tolerance.

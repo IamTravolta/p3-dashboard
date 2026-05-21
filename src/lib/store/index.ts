@@ -60,11 +60,11 @@ const DEFAULT_SETTINGS: PortfolioSettings = {
     sentiment: 0.15,
   },
   caps: {
-    singleName: 15,
-    sector:     35,
+    singleName: 12,   // matches HTML reference default
+    sector:     25,   // matches HTML reference default
     regionUS:   60,
     regionEU:   40,
-    USD:        70,
+    USD:        75,
     cash:       20,
   },
   currency: 'EUR',

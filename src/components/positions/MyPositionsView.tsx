@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { usePositions, usePrices, useStats, useDashboardStore } from '@/lib/store'
 import type { Position, FactorScores } from '@/lib/types/database'
+import { computeQuickProTrader } from '@/lib/utils/quickProTrader'
 import SellPositionModal from './SellPositionModal'
 
 // ── Analysis types ─────────────────────────────────────────────────────────────
@@ -226,6 +227,100 @@ function PositionDetail({
   )
 }
 
+// ── Position Action Panel ──────────────────────────────────────────────────────
+function PositionActionPanel({ position }: { position: Position }) {
+  const prices     = usePrices()
+  const positions  = useDashboardStore(s => s.positions)
+  const watchlist  = useDashboardStore(s => s.watchlist)
+  const signalCache = useDashboardStore(s => s.signalCache)
+
+  const livePrice = prices[position.ticker] ?? position.currentPrice
+  const verdict   = signalCache[position.ticker]?.verdict ?? null
+  const q = computeQuickProTrader(position.ticker, livePrice, positions, watchlist, prices, verdict)
+
+  const stopLoss   = livePrice * 0.85        // hard stop-loss at -15%
+  const trimZone   = position.avgBuyPrice * 1.75  // trim zone at +75% from avg buy
+  const pnlPct     = ((livePrice - position.avgBuyPrice) / position.avgBuyPrice) * 100
+
+  return (
+    <div className="mt-3 space-y-3">
+      <h4 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+        Position Action Panel
+      </h4>
+
+      {/* Stop loss + Trim zone + Kelly */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded p-2.5" style={{ background: 'var(--danger-bg)', borderLeft: '3px solid var(--danger-text)' }}>
+          <div className="text-xs font-semibold mb-0.5" style={{ color: 'var(--danger-text)' }}>Hard Stop-loss</div>
+          <div className="text-sm font-mono font-bold" style={{ color: 'var(--danger-text)' }}>
+            €{stopLoss.toFixed(2)}
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>−15% from avg buy</div>
+        </div>
+
+        <div className="rounded p-2.5" style={{ background: 'var(--warning-bg)', borderLeft: '3px solid var(--warning-text)' }}>
+          <div className="text-xs font-semibold mb-0.5" style={{ color: 'var(--warning-text)' }}>Trim Zone</div>
+          <div className="text-sm font-mono font-bold" style={{ color: 'var(--warning-text)' }}>
+            €{trimZone.toFixed(2)}
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>+75% from avg buy</div>
+        </div>
+
+        <div className="rounded p-2.5" style={{ background: pnlPct >= 75 ? 'var(--success-bg)' : pnlPct <= -15 ? 'var(--danger-bg)' : 'var(--info-bg)', borderLeft: `3px solid ${pnlPct >= 75 ? 'var(--success-text)' : pnlPct <= -15 ? 'var(--danger-text)' : 'var(--info-text)'}` }}>
+          <div className="text-xs font-semibold mb-0.5" style={{ color: pnlPct >= 75 ? 'var(--success-text)' : pnlPct <= -15 ? 'var(--danger-text)' : 'var(--info-text)' }}>Status</div>
+          <div className="text-sm font-mono font-bold" style={{ color: pnlPct >= 75 ? 'var(--success-text)' : pnlPct <= -15 ? 'var(--danger-text)' : 'var(--info-text)' }}>
+            {pnlPct >= 75 ? '↑ TRIM ZONE' : pnlPct <= -15 ? '↓ STOP LOSS' : '● HOLD RANGE'}
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+            {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}% vs avg
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Pro Trader recommendation */}
+      {q && (
+        <div className="rounded p-3" style={{ background: 'var(--bg)', border: '1px dashed var(--border)' }}>
+          <div className="flex justify-between items-start mb-1.5">
+            <div className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>⚡ Quick Pro Trader</div>
+            <span
+              className="pill text-xs"
+              style={{
+                background: q.action === 'EXIT' ? 'var(--danger-bg)' : q.action === 'TRIM' ? 'var(--warning-bg)' : q.action.includes('BUY') ? 'var(--success-bg)' : 'var(--info-bg)',
+                color: q.action === 'EXIT' ? 'var(--danger-text)' : q.action === 'TRIM' ? 'var(--warning-text)' : q.action.includes('BUY') ? 'var(--success-text)' : 'var(--info-text)',
+              }}
+            >
+              {q.action} · {q.confidence}%
+            </span>
+          </div>
+          <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{q.one_liner}</div>
+          {q.action === 'TRIM' && q.trim_shares && (
+            <div className="rounded p-1.5 text-xs font-semibold" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
+              📤 Sell {q.trim_shares} shares (~€{q.trim_eur?.toLocaleString('nl-NL')}) · keep {q.keep_shares}
+            </div>
+          )}
+          {q.action === 'EXIT' && q.trim_shares && (
+            <div className="rounded p-1.5 text-xs font-semibold" style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
+              📤 Sell ALL {q.trim_shares} shares (~€{q.trim_eur?.toLocaleString('nl-NL')})
+            </div>
+          )}
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+            <span>Stop: €{q.stop_loss}</span>
+            <span>TP1: €{q.take_profit_1}</span>
+            <span>R/R: {q.risk_reward_ratio}x</span>
+            <span>Size: {q.position_size_pct}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Factor breakdown */}
+      <div>
+        <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Factor Scores</div>
+        <FactorBars scores={position.factorScores} />
+      </div>
+    </div>
+  )
+}
+
 // ── Main row ───────────────────────────────────────────────────────────────────
 
 function PositionAnalysisResult({ result }: { result: PositionAnalysisResult }) {
@@ -431,6 +526,7 @@ function PositionRow({
       {/* Expanded detail */}
       {expanded && (
         <div className="px-4 pb-4">
+          <PositionActionPanel position={position} />
           <PositionDetail
             position={position}
             onDelete={() => setExpanded(false)}

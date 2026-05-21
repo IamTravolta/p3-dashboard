@@ -48,6 +48,14 @@ function HeatmapTile({
     scoreColor = 'var(--warning-text)'
   }
 
+  // Action hint derived from score + P&L
+  const actionHint =
+    score >= 70 && pnlPct >= 75 ? { label: '△ TRIM ZONE', color: 'var(--warning-text)' }
+    : score >= 70              ? { label: '↑ HOLD', color: 'var(--success-text)' }
+    : score >= 55              ? { label: '△ WATCH', color: 'var(--yellow-text)' }
+    : score >= 40              ? { label: '▽ WEAK', color: 'var(--warning-text)' }
+    :                            { label: '↓ SELL', color: 'var(--danger-text)' }
+
   return (
     <div
       style={{
@@ -76,7 +84,10 @@ function HeatmapTile({
       >
         {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%
       </div>
-      <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+      <div className="text-xs mt-1 font-semibold" style={{ color: actionHint.color }}>
+        {actionHint.label}
+      </div>
+      <div className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
         {portfolioPct.toFixed(1)}% of ptf
       </div>
     </div>
@@ -470,6 +481,33 @@ export default function DashboardHomeView() {
         </span>
         <span className="pill pill-info" style={{ fontSize: 10, marginLeft: 'auto' }}>Pending sync</span>
       </div>
+
+      {/* ── A3: KLAAR om te kopen banner ───────────────────────────────────── */}
+      {(() => {
+        const klaarItems = watchlist
+          .map((w) => ({ ...w, score: calcScore(w) }))
+          .filter((w) => w.score >= 70)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 4)
+        if (klaarItems.length === 0) return null
+        return (
+          <div className="rounded p-3" style={{ background: 'rgba(125,216,159,0.08)', border: '0.5px solid var(--success-text)' }}>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="text-xs font-bold" style={{ color: 'var(--success-text)' }}>✓ KLAAR OM TE KOPEN</span>
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Watchlist items met score ≥ 70 — klaar voor entry</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {klaarItems.map((w) => (
+                <div key={w.id} className="flex items-center gap-1.5 rounded px-2 py-1"
+                  style={{ background: 'var(--success-bg)', border: '0.5px solid var(--success-text)' }}>
+                  <span className="font-mono font-bold text-xs" style={{ color: 'var(--success-text)' }}>{w.ticker}</span>
+                  <span className="text-xs font-medium" style={{ color: 'var(--success-text)' }}>{w.score.toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── B: Heatmap ────────────────────────────────────────────────────── */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>

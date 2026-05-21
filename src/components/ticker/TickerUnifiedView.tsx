@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useDashboardStore } from '@/lib/store'
+import { computeQuickProTrader, type QuickAction } from '@/lib/utils/quickProTrader'
 
 // ── TradingView chart widget ──────────────────────────────────────────────────
 function TradingViewChart({ ticker }: { ticker: string }) {
@@ -48,7 +49,6 @@ function TradingViewChart({ ticker }: { ticker: string }) {
         script.onload = createWidget
         document.head.appendChild(script)
       } else {
-        // Script loading – retry shortly
         const t = setTimeout(createWidget, 1500)
         return () => clearTimeout(t)
       }
@@ -62,7 +62,7 @@ function TradingViewChart({ ticker }: { ticker: string }) {
         <div>
           <h3 className="text-base font-semibold">📈 TradingView Chart — {ticker}</h3>
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            Live candles + volume + RSI. Wissel interval via knoppen.
+            Live candles + volume + RSI. Switch interval below.
           </div>
         </div>
         <div className="flex gap-1 flex-wrap">
@@ -113,18 +113,18 @@ function PositionCard({ ticker }: { ticker: string }) {
 
   return (
     <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--info-text)' }}>◇ Positie context</h3>
+      <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--info-text)' }}>◇ Position context</h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="kpi-card">
           <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Shares</div>
           <div className="text-lg font-semibold mt-0.5">{pos.shares}</div>
         </div>
         <div className="kpi-card">
-          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Gem. koopprijs</div>
+          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Avg buy price</div>
           <div className="text-lg font-semibold mt-0.5">€{pos.avgBuyPrice.toFixed(2)}</div>
         </div>
         <div className="kpi-card">
-          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Waarde</div>
+          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Value</div>
           <div className="text-lg font-semibold mt-0.5">€{value.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}</div>
         </div>
         <div className="kpi-card">
@@ -141,6 +141,32 @@ function PositionCard({ ticker }: { ticker: string }) {
   )
 }
 
+// ── Thesis panel ─────────────────────────────────────────────────────────────
+function ThesisPanel({ ticker }: { ticker: string }) {
+  const positions = useDashboardStore(s => s.positions)
+  const watchlist = useDashboardStore(s => s.watchlist)
+  const pos  = positions.find(p => p.ticker === ticker)
+  const wat  = watchlist.find(w => w.ticker === ticker)
+  const text = pos?.thesis ?? wat?.reason ?? ''
+
+  return (
+    <div className="surface p-4" style={{ borderLeft: '4px solid var(--yellow-text)' }}>
+      <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--yellow-text)' }}>📝 Investment Thesis</h3>
+      {text ? (
+        <div className="rounded p-3" style={{ background: 'var(--yellow-bg)' }}>
+          <p className="text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.7 }}>{text}</p>
+        </div>
+      ) : (
+        <div className="rounded p-3" style={{ background: 'var(--bg)', border: '1px dashed var(--border)' }}>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            Geen thesis opgeslagen voor {ticker}. Voeg toe via Portfolio → Posities → bewerk positie.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Signal snapshot / Unified Verdict ─────────────────────────────────────────
 function SignalSnapshot({ ticker }: { ticker: string }) {
   const signalCache = useDashboardStore(s => s.signalCache)
@@ -151,7 +177,7 @@ function SignalSnapshot({ ticker }: { ticker: string }) {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
         <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--purple-text)' }}>🎯 Unified Verdict</h3>
         <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          Nog geen signaaldata voor {ticker}. Gebruik Action Center → sync om signalen op te halen.
+          No signal data for {ticker} yet. Use Action Center to sync signals.
         </p>
       </div>
     )
@@ -159,6 +185,8 @@ function SignalSnapshot({ ticker }: { ticker: string }) {
 
   const verdict = entry.verdict
   const signals = entry.signals as Record<string, { value?: number; label?: string }> | undefined
+  const bullish = Object.entries(signals ?? {}).filter(([, m]) => ((m as any).value ?? 0) >= 60)
+  const bearish = Object.entries(signals ?? {}).filter(([, m]) => ((m as any).value ?? 0) < 40)
 
   return (
     <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
@@ -172,38 +200,171 @@ function SignalSnapshot({ ticker }: { ticker: string }) {
       </div>
 
       {verdict && (
-        <>
-          <div className="rounded p-2.5 mb-3" style={{ background: 'var(--purple-bg)' }}>
-            <div className="text-sm font-bold" style={{ color: 'var(--purple-text)' }}>{verdict.finalVerdict}</div>
-            {verdict.reasoning && (
-              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{verdict.reasoning}</div>
-            )}
-          </div>
-        </>
-      )}
-
-      {signals && Object.keys(signals).length > 0 && (
-        <div className="space-y-2">
-          {Object.entries(signals).slice(0, 8).map(([name, m]) => {
-            const v = (m as any).value ?? 0
-            const barColor = v >= 70 ? 'var(--success-text)' : v >= 55 ? 'var(--yellow-text)' : v >= 40 ? 'var(--warning-text)' : 'var(--danger-text)'
-            return (
-              <div key={name}>
-                <div className="flex justify-between text-xs mb-0.5">
-                  <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
-                  <span style={{ color: barColor }}>{v}</span>
-                </div>
-                <div className="progress-track">
-                  <div className="progress-fill" style={{ width: `${Math.min(v, 100)}%`, background: barColor }} />
-                </div>
-              </div>
-            )
-          })}
+        <div className="rounded p-2.5 mb-3" style={{ background: 'var(--purple-bg)' }}>
+          <div className="text-sm font-bold" style={{ color: 'var(--purple-text)' }}>{verdict.finalVerdict}</div>
+          {verdict.reasoning && (
+            <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{verdict.reasoning}</div>
+          )}
         </div>
       )}
 
+      {signals && Object.keys(signals).length > 0 && (
+        <>
+          {bullish.length > 0 && (
+            <div className="mb-2">
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--success-text)' }}>↑ Bullish modules</div>
+              <div className="space-y-1.5">
+                {bullish.slice(0, 5).map(([name, m]) => {
+                  const v = (m as any).value ?? 0
+                  return (
+                    <div key={name}>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
+                        <span style={{ color: 'var(--success-text)' }}>{v}</span>
+                      </div>
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{ width: `${Math.min(v, 100)}%`, background: 'var(--success-text)' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {bearish.length > 0 && (
+            <div className="mt-2">
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--danger-text)' }}>↓ Bearish modules</div>
+              <div className="space-y-1.5">
+                {bearish.slice(0, 3).map(([name, m]) => {
+                  const v = (m as any).value ?? 0
+                  return (
+                    <div key={name}>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
+                        <span style={{ color: 'var(--danger-text)' }}>{v}</span>
+                      </div>
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{ width: `${Math.min(v, 100)}%`, background: 'var(--danger-text)' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <div className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
-        Gecached {new Date(entry.fetchedAt).toLocaleString('nl-NL')}
+        Cached {new Date(entry.fetchedAt).toLocaleString('nl-NL')}
+      </div>
+    </div>
+  )
+}
+
+// ── Quick Pro Trader panel ────────────────────────────────────────────────────
+const ACTION_STYLE: Record<QuickAction, { bg: string; text: string; icon: string }> = {
+  STRONG_BUY: { bg: 'var(--success-bg)', text: 'var(--success-text)', icon: '⭐⭐' },
+  BUY:        { bg: 'var(--success-bg)', text: 'var(--success-text)', icon: '⭐'  },
+  HOLD:       { bg: 'var(--info-bg)',    text: 'var(--info-text)',    icon: '◐'   },
+  TRIM:       { bg: 'var(--warning-bg)', text: 'var(--warning-text)', icon: '↓'  },
+  EXIT:       { bg: 'var(--danger-bg)',  text: 'var(--danger-text)',  icon: '⛔'  },
+  AVOID:      { bg: 'var(--bg)',         text: 'var(--text-tertiary)', icon: '–'  },
+}
+
+function QuickProTraderPanel({ ticker }: { ticker: string }) {
+  const positions   = useDashboardStore(s => s.positions)
+  const watchlist   = useDashboardStore(s => s.watchlist)
+  const prices      = useDashboardStore(s => s.prices)
+  const signalCache = useDashboardStore(s => s.signalCache)
+
+  const pos     = positions.find(p => p.ticker === ticker)
+  const price   = prices[ticker] ?? pos?.currentPrice ?? 0
+  const verdict = signalCache[ticker]?.verdict ?? null
+
+  const q = computeQuickProTrader(ticker, price, positions, watchlist, prices, verdict)
+
+  if (!q) {
+    return (
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--primary)' }}>
+        <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--primary)' }}>💼 Pro Trader Analysis</h3>
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+          No live price available for {ticker} — unable to compute analysis.
+        </p>
+      </div>
+    )
+  }
+
+  const style = ACTION_STYLE[q.action]
+
+  // Action instruction box
+  const instructionContent = (() => {
+    if (q.action === 'EXIT' && q.trim_shares)
+      return { bg: 'var(--danger-bg)', text: 'var(--danger-text)', msg: `📤 SELL ALL ${q.trim_shares} shares (~€${q.trim_eur?.toLocaleString('nl-NL')}) · close position fully` }
+    if (q.action === 'TRIM' && q.trim_shares)
+      return { bg: 'var(--warning-bg)', text: 'var(--warning-text)', msg: `📤 SELL ${q.trim_shares} of ${q.current_shares} shares (~€${q.trim_eur?.toLocaleString('nl-NL')}, ${q.trim_pct}%) · keep ${q.keep_shares} shares` }
+    if ((q.action === 'BUY' || q.action === 'STRONG_BUY') && q.buy_shares)
+      return { bg: 'var(--success-bg)', text: 'var(--success-text)', msg: `📥 BUY ${q.buy_shares} shares (~€${q.buy_eur?.toLocaleString('nl-NL')}) · target ${q.position_size_pct}% portfolio` }
+    return null
+  })()
+
+  return (
+    <div className="surface p-4" style={{ borderLeft: '4px solid var(--primary)' }}>
+      <div className="flex justify-between items-start gap-3 flex-wrap mb-3">
+        <div>
+          <h3 className="text-base font-semibold" style={{ color: 'var(--primary)' }}>💼 Pro Trader Analysis</h3>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            Quick (instant, rule-based) · Deep AI via Railway backend
+          </div>
+        </div>
+        <span className="pill" style={{ background: style.bg, color: style.text, fontWeight: 600, fontSize: 12 }}>
+          {style.icon} {q.action}
+        </span>
+      </div>
+
+      {/* Quick analysis block */}
+      <div className="rounded p-3" style={{ background: 'var(--bg)', border: '1px dashed var(--border)' }}>
+        <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>⚡ Quick Analysis (rule-based)</div>
+        <div className="text-sm font-bold mb-1" style={{ color: style.text }}>{q.action} · {q.confidence}% confidence</div>
+        <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>{q.one_liner}</div>
+
+        {instructionContent && (
+          <div className="rounded p-2 mb-2 font-semibold" style={{ background: instructionContent.bg, color: instructionContent.text, fontSize: 12 }}>
+            {instructionContent.msg}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>Entry:</strong> €{q.entry_level}</span>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>Stop:</strong> €{q.stop_loss}</span>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>TP1:</strong> €{q.take_profit_1}</span>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>TP2:</strong> €{q.take_profit_2}</span>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>R/R:</strong> {q.risk_reward_ratio}x</span>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>Size:</strong> {q.position_size_pct}%</span>
+          <span><strong style={{ color: 'var(--text-secondary)' }}>Horizon:</strong> {q.time_horizon}</span>
+        </div>
+        <div className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <strong>Risk:</strong> {q.key_risk} · <strong>Catalyst:</strong> {q.key_catalyst}
+        </div>
+      </div>
+
+      {/* Stop loss & trim zone visual */}
+      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+        <div className="rounded p-2 text-center" style={{ background: 'var(--danger-bg)' }}>
+          <div style={{ color: 'var(--danger-text)', fontWeight: 600 }}>Stop Loss</div>
+          <div style={{ color: 'var(--danger-text)', fontSize: 14, fontWeight: 700 }}>€{q.stop_loss}</div>
+          <div style={{ color: 'var(--text-tertiary)' }}>−{((1 - q.stop_loss / q.entry_level) * 100).toFixed(1)}%</div>
+        </div>
+        <div className="rounded p-2 text-center" style={{ background: 'var(--bg)', border: '0.5px solid var(--border)' }}>
+          <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Entry</div>
+          <div style={{ color: 'var(--primary)', fontSize: 14, fontWeight: 700 }}>€{q.entry_level}</div>
+          <div style={{ color: 'var(--text-tertiary)' }}>now</div>
+        </div>
+        <div className="rounded p-2 text-center" style={{ background: 'var(--success-bg)' }}>
+          <div style={{ color: 'var(--success-text)', fontWeight: 600 }}>Target 1</div>
+          <div style={{ color: 'var(--success-text)', fontSize: 14, fontWeight: 700 }}>€{q.take_profit_1}</div>
+          <div style={{ color: 'var(--text-tertiary)' }}>+{((q.take_profit_1 / q.entry_level - 1) * 100).toFixed(1)}%</div>
+        </div>
       </div>
     </div>
   )
@@ -213,7 +374,12 @@ function SignalSnapshot({ ticker }: { ticker: string }) {
 export default function TickerUnifiedView() {
   const positions = useDashboardStore(s => s.positions)
   const watchlist = useDashboardStore(s => s.watchlist)
-  const [ticker, setTicker] = useState('')
+  const activeTicker = useDashboardStore(s => s.activeTicker)
+  const [ticker, setTicker] = useState(activeTicker ?? '')
+
+  useEffect(() => {
+    if (activeTicker) setTicker(activeTicker)
+  }, [activeTicker])
 
   const portTickers  = positions.map(p => p.ticker)
   const watchTickers = (watchlist ?? []).map(w => w.ticker).filter(t => !portTickers.includes(t))
@@ -225,9 +391,9 @@ export default function TickerUnifiedView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🎯 Per Aandeel · Unified Verdict</h1>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🎯 Per Aandeel · Unified View</h1>
             <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>
-              Eén view per ticker: alle modules samengebracht in één conclusie. Geen losse rapporten.
+              Chart · Verdict · Pro Trader · Thesis — alles per ticker inline
             </div>
           </div>
           <select
@@ -249,12 +415,6 @@ export default function TickerUnifiedView() {
             )}
           </select>
         </div>
-        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--purple-bg)' }}>
-          <div className="text-xs" style={{ color: 'var(--purple-text)', lineHeight: 1.6 }}>
-            Per ticker: <strong>Council + Validator + Smart Money + Earnings AI + Insider Flow</strong> samengevoegd.
-            Toont positieve/negatieve modules, conflicten, finale aanbeveling en confidence-score.
-          </div>
-        </div>
       </div>
 
       {/* Empty state */}
@@ -263,7 +423,7 @@ export default function TickerUnifiedView() {
           <div className="text-4xl mb-3">🎯</div>
           <div className="text-sm font-semibold mb-1">Kies een aandeel</div>
           <div className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Selecteer een ticker om chart, verdict, signalen en positie-context inline te zien.
+            Selecteer een ticker om chart, verdict, Pro Trader analyse en thesis inline te zien.
           </div>
           {allTickers.length === 0 ? (
             <div className="rounded p-3 text-xs inline-block" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
@@ -291,7 +451,9 @@ export default function TickerUnifiedView() {
         <div className="space-y-4">
           <PositionCard ticker={ticker} />
           <TradingViewChart ticker={ticker} />
+          <QuickProTraderPanel ticker={ticker} />
           <SignalSnapshot ticker={ticker} />
+          <ThesisPanel ticker={ticker} />
         </div>
       )}
     </div>
