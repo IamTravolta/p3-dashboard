@@ -5,7 +5,6 @@
       "name": "Next.js Dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "/Users/travoltaogbee/Documents/GitHub/p3-dashboard",
       "port": 3000,
       "autoPort": true
     }

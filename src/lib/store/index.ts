@@ -346,12 +346,16 @@ export const useDashboardStore = create<DashboardState>()(
         // ── UI ────────────────────────────────────────────────
         setActiveGroup: (group, subTab) => {
           const defaults: Record<string, string> = {
-            dashboard: 'dashboard-home',
-            action: 'action', portfolio: 'overview',
-            pipeline: 'pipeline-unified', learnings: 'signals',
-            briefing: 'briefing', settings: 'settings',
+            dashboard:  'dashboard-home',
+            action:     'action',
+            ticker:     'ticker-unified',
+            portfolio:  'positions',
+            pipeline:   'pipeline-unified',
+            learnings:  'learnings-hub',
+            briefing:   'briefing',
+            settings:   'settings',
           }
-          set({ activeGroup: group, activeSubTab: subTab ?? defaults[group] ?? 'overview' })
+          set({ activeGroup: group, activeSubTab: subTab ?? defaults[group] ?? 'dashboard-home' })
         },
 
         setActiveSubTab: (subTab) => set({ activeSubTab: subTab }),

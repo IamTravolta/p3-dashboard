@@ -13,44 +13,36 @@ function Skeleton() {
   )
 }
 
-// next/dynamic requires the options argument to be an inline object literal (not a variable)
-// ── Portfolio group ───────────────────────────────────────────────────────────
-const ActionCenterView   = dynamic(() => import('@/components/actionCenter/ActionCenterView'),   { loading: () => <Skeleton /> })
-const MyPositionsView    = dynamic(() => import('@/components/positions/MyPositionsView'),       { loading: () => <Skeleton /> })
-const SizingView         = dynamic(() => import('@/components/positions/SizingView'),            { loading: () => <Skeleton /> })
-const CatalystView       = dynamic(() => import('@/components/positions/CatalystView'),          { loading: () => <Skeleton /> })
-const HedgeView          = dynamic(() => import('@/components/positions/HedgeView'),             { loading: () => <Skeleton /> })
-const OptionsView        = dynamic(() => import('@/components/research/OptionsView'),            { loading: () => <Skeleton /> })
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+const DashboardHomeView   = dynamic(() => import('@/components/dashboard/DashboardHomeView'),    { loading: () => <Skeleton /> })
+
+// ── Action Center ─────────────────────────────────────────────────────────────
+const ActionCenterView    = dynamic(() => import('@/components/actionCenter/ActionCenterView'),  { loading: () => <Skeleton /> })
+
+// ── Per Ticker ────────────────────────────────────────────────────────────────
+const TickerUnifiedView   = dynamic(() => import('@/components/ticker/TickerUnifiedView'),       { loading: () => <Skeleton /> })
+
+// ── Portfolio group (combined views) ─────────────────────────────────────────
+const PositionsHubView    = dynamic(() => import('@/components/positions/PositionsHubView'),     { loading: () => <Skeleton /> })
+const RiskSizingView      = dynamic(() => import('@/components/positions/RiskSizingView'),       { loading: () => <Skeleton /> })
+const TimingView          = dynamic(() => import('@/components/positions/TimingView'),            { loading: () => <Skeleton /> })
 
 // ── Pipeline group ────────────────────────────────────────────────────────────
-const TradeIdeasView     = dynamic(() => import('@/components/research/TradeIdeasView'),         { loading: () => <Skeleton /> })
-const ValidatorView      = dynamic(() => import('@/components/research/ValidatorView'),          { loading: () => <Skeleton /> })
-const InsiderFlowView    = dynamic(() => import('@/components/research/InsiderFlowView'),        { loading: () => <Skeleton /> })
-const SmartMoneyView     = dynamic(() => import('@/components/research/SmartMoneyView'),         { loading: () => <Skeleton /> })
-const EarningsView       = dynamic(() => import('@/components/research/EarningsView'),           { loading: () => <Skeleton /> })
-const MomentumView       = dynamic(() => import('@/components/research/MomentumView'),           { loading: () => <Skeleton /> })
-const CorrelationsView   = dynamic(() => import('@/components/research/CorrelationsView'),       { loading: () => <Skeleton /> })
-const PredictionsView    = dynamic(() => import('@/components/research/PredictionsView'),        { loading: () => <Skeleton /> })
+const PipelineUnifiedView = dynamic(() => import('@/components/pipeline/PipelineUnifiedView'),   { loading: () => <Skeleton /> })
+const ValidatorView       = dynamic(() => import('@/components/research/ValidatorView'),          { loading: () => <Skeleton /> })
+const BigMoneyView        = dynamic(() => import('@/components/pipeline/BigMoneyView'),           { loading: () => <Skeleton /> })
+const EarningsView        = dynamic(() => import('@/components/research/EarningsView'),           { loading: () => <Skeleton /> })
+const ResearchView        = dynamic(() => import('@/components/pipeline/ResearchView'),           { loading: () => <Skeleton /> })
 
 // ── Learnings group ───────────────────────────────────────────────────────────
-const SignalsView        = dynamic(() => import('@/components/signals/SignalsView'),             { loading: () => <Skeleton /> })
-const PaperTradesView    = dynamic(() => import('@/components/paperTrades/PaperTradesView'),     { loading: () => <Skeleton /> })
-const ThesisView         = dynamic(() => import('@/components/thesis/ThesisView'),               { loading: () => <Skeleton /> })
-const BehavioralView     = dynamic(() => import('@/components/behavioral/BehavioralView'),       { loading: () => <Skeleton /> })
-const BacktestView       = dynamic(() => import('@/components/learnings/BacktestView'),          { loading: () => <Skeleton /> })
-const SourcesView        = dynamic(() => import('@/components/learnings/SourcesView'),           { loading: () => <Skeleton /> })
+const LearningsHubView    = dynamic(() => import('@/components/learnings/LearningsHubView'),     { loading: () => <Skeleton /> })
+const PaperTradesView     = dynamic(() => import('@/components/paperTrades/PaperTradesView'),     { loading: () => <Skeleton /> })
+const BacktestView        = dynamic(() => import('@/components/learnings/BacktestView'),          { loading: () => <Skeleton /> })
+const SourcesView         = dynamic(() => import('@/components/learnings/SourcesView'),           { loading: () => <Skeleton /> })
 
 // ── Standalone ────────────────────────────────────────────────────────────────
-const BriefingView       = dynamic(() => import('@/components/briefing/BriefingView'),           { loading: () => <Skeleton /> })
-const SettingsView       = dynamic(() => import('@/components/settings/SettingsView'),           { loading: () => <Skeleton /> })
-
-// ── New views ─────────────────────────────────────────────────────────────────
-const PipelineUnifiedView = dynamic(() => import('@/components/pipeline/PipelineUnifiedView'),   { loading: () => <Skeleton /> })
-const WatchToSellView     = dynamic(() => import('@/components/positions/WatchToSellView'),      { loading: () => <Skeleton /> })
-const PreAfterMarketView  = dynamic(() => import('@/components/positions/PreAfterMarketView'),   { loading: () => <Skeleton /> })
-const WinRateView         = dynamic(() => import('@/components/learnings/WinRateView'),          { loading: () => <Skeleton /> })
-const ClaudeLogView       = dynamic(() => import('@/components/learnings/ClaudeLogView'),        { loading: () => <Skeleton /> })
-const DashboardHomeView   = dynamic(() => import('@/components/dashboard/DashboardHomeView'),    { loading: () => <Skeleton /> })
+const BriefingView        = dynamic(() => import('@/components/briefing/BriefingView'),           { loading: () => <Skeleton /> })
+const SettingsView        = dynamic(() => import('@/components/settings/SettingsView'),            { loading: () => <Skeleton /> })
 
 export default function TabContent() {
   const activeGroup  = useDashboardStore((s) => s.activeGroup)
@@ -59,43 +51,34 @@ export default function TabContent() {
   // ── Dashboard ─────────────────────────────────────────────
   if (activeGroup === 'dashboard' || activeSubTab === 'dashboard-home') return <DashboardHomeView />
 
-  // ── Intelligence ──────────────────────────────────────────
+  // ── Action Center ─────────────────────────────────────────
   if (activeGroup === 'action') return <ActionCenterView />
+
+  // ── Per Ticker ────────────────────────────────────────────
+  if (activeGroup === 'ticker') return <TickerUnifiedView />
 
   // ── Portfolio ─────────────────────────────────────────────
   if (activeGroup === 'portfolio') {
-    if (activeSubTab === 'positions') return <MyPositionsView />
-    if (activeSubTab === 'sizing')    return <SizingView />
-    if (activeSubTab === 'catalysts') return <CatalystView />
-    if (activeSubTab === 'hedge')     return <HedgeView />
-    if (activeSubTab === 'options')   return <OptionsView />
-    if (activeSubTab === 'watch-to-sell') return <WatchToSellView />
-    if (activeSubTab === 'premarket') return <PreAfterMarketView />
+    if (activeSubTab === 'risk-sizing') return <RiskSizingView />
+    if (activeSubTab === 'timing')      return <TimingView />
+    return <PositionsHubView /> // default: positions
   }
 
   // ── Pipeline ──────────────────────────────────────────────
   if (activeGroup === 'pipeline') {
-    if (activeSubTab === 'pipeline-unified') return <PipelineUnifiedView />
-    if (activeSubTab === 'ideas')        return <TradeIdeasView />
-    if (activeSubTab === 'validator')    return <ValidatorView />
-    if (activeSubTab === 'insider')      return <InsiderFlowView />
-    if (activeSubTab === 'smartmoney')   return <SmartMoneyView />
-    if (activeSubTab === 'earnings')     return <EarningsView />
-    if (activeSubTab === 'momentum')     return <MomentumView />
-    if (activeSubTab === 'correlations') return <CorrelationsView />
-    if (activeSubTab === 'predictions')  return <PredictionsView />
+    if (activeSubTab === 'validator')        return <ValidatorView />
+    if (activeSubTab === 'bigmoney')         return <BigMoneyView />
+    if (activeSubTab === 'earnings')         return <EarningsView />
+    if (activeSubTab === 'research')         return <ResearchView />
+    return <PipelineUnifiedView /> // default: pipeline-unified
   }
 
   // ── Learnings ─────────────────────────────────────────────
   if (activeGroup === 'learnings') {
-    if (activeSubTab === 'signals')    return <SignalsView />
-    if (activeSubTab === 'win-rate')   return <WinRateView />
-    if (activeSubTab === 'claude-log') return <ClaudeLogView />
-    if (activeSubTab === 'paper')      return <PaperTradesView />
-    if (activeSubTab === 'thesis')     return <ThesisView />
-    if (activeSubTab === 'behavioral') return <BehavioralView />
-    if (activeSubTab === 'backtest')   return <BacktestView />
-    if (activeSubTab === 'sources')    return <SourcesView />
+    if (activeSubTab === 'paper')    return <PaperTradesView />
+    if (activeSubTab === 'backtest') return <BacktestView />
+    if (activeSubTab === 'sources')  return <SourcesView />
+    return <LearningsHubView /> // default: learnings-hub
   }
 
   // ── Briefing / Settings ───────────────────────────────────
