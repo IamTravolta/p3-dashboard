@@ -32,7 +32,10 @@ async function handler(
   const { path } = await params
   const pathStr   = path.join('/')
   const search    = req.nextUrl.search ?? ''
-  const targetUrl = `${railwayUrl}/api/${pathStr}${search}`
+  // health lives at root, everything else is under /api/
+  const targetUrl = pathStr === 'health'
+    ? `${railwayUrl}/health`
+    : `${railwayUrl}/api/${pathStr}${search}`
 
   const init: RequestInit = {
     method:  req.method,
