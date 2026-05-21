@@ -103,6 +103,9 @@ interface DashboardState {
   isLoading:    boolean
   isSyncing:    boolean
   activeTicker: string | null  // ticker currently in detail view
+  killSwitchActive: boolean
+  paperModeActive:  boolean
+  tickerModalOpen:  boolean
 
   // ── Railway backend ─────────────────────────────────────────
   railwayUrl:  string
@@ -144,6 +147,9 @@ interface DashboardState {
   setActiveSubTab:  (subTab: string) => void
   setActiveTicker:  (ticker: string | null) => void
   setRailwayUrl:    (url: string) => void
+  setKillSwitch:    (v: boolean) => void
+  setPaperMode:     (v: boolean) => void
+  setTickerModalOpen: (v: boolean) => void
   addAlert:         (alert: Omit<Alert, 'id' | 'createdAt'>) => void
   markAlertRead:    (id: string) => void
   clearAlerts:      () => void
@@ -233,6 +239,9 @@ export const useDashboardStore = create<DashboardState>()(
         alerts:         [],
         isLoading:      false,
         isSyncing:      false,
+        killSwitchActive: false,
+        paperModeActive:  false,
+        tickerModalOpen:  false,
 
         // ── Auth ──────────────────────────────────────────────
         setUserId: (id) => set({ userId: id }),
@@ -338,7 +347,7 @@ export const useDashboardStore = create<DashboardState>()(
         setActiveGroup: (group, subTab) => {
           const defaults: Record<string, string> = {
             action: 'action', portfolio: 'overview',
-            pipeline: 'watchlist', learnings: 'signals',
+            pipeline: 'pipeline-unified', learnings: 'signals',
             briefing: 'briefing', settings: 'settings',
           }
           set({ activeGroup: group, activeSubTab: subTab ?? defaults[group] ?? 'overview' })
@@ -347,6 +356,9 @@ export const useDashboardStore = create<DashboardState>()(
         setActiveSubTab: (subTab) => set({ activeSubTab: subTab }),
         setActiveTicker: (ticker) => set({ activeTicker: ticker }),
         setRailwayUrl:   (url) => set({ railwayUrl: url }),
+        setKillSwitch:   (v) => set({ killSwitchActive: v }),
+        setPaperMode:    (v) => set({ paperModeActive: v }),
+        setTickerModalOpen: (v) => set({ tickerModalOpen: v }),
 
         addAlert: (alert) => {
           const id = crypto.randomUUID()
@@ -403,6 +415,9 @@ export const useDashboardStore = create<DashboardState>()(
             alerts:            [],
             isLoading:         false,
             isSyncing:         false,
+            killSwitchActive:  false,
+            paperModeActive:   false,
+            tickerModalOpen:   false,
           }),
       }),
       {
@@ -416,10 +431,12 @@ export const useDashboardStore = create<DashboardState>()(
           soldPositions: state.soldPositions,
           settings:      state.settings,
           cash:          state.cash,
-          activeGroup:   state.activeGroup,
-          activeSubTab:  state.activeSubTab,
-          railwayUrl:    state.railwayUrl,
-          alerts:        state.alerts,
+          activeGroup:      state.activeGroup,
+          activeSubTab:     state.activeSubTab,
+          railwayUrl:       state.railwayUrl,
+          alerts:           state.alerts,
+          killSwitchActive: state.killSwitchActive,
+          paperModeActive:  state.paperModeActive,
         }),
       }
     ),

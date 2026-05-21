@@ -42,11 +42,13 @@ export default function SettingsView() {
   const [toast,    setToast]    = useState<string | null>(null)
 
   // Railway section state
-  const railwayUrl    = useDashboardStore((s) => s.railwayUrl)
-  const setRailwayUrl = useDashboardStore((s) => s.setRailwayUrl)
-  const storeSettings = useDashboardStore((s) => s.settings)
+  const railwayUrl     = useDashboardStore((s) => s.railwayUrl)
+  const setRailwayUrl  = useDashboardStore((s) => s.setRailwayUrl)
+  const storeSettings  = useDashboardStore((s) => s.settings)
   const setStoreSettings = useDashboardStore((s) => s.setSettings)
-  const storeState    = useDashboardStore.getState
+  const storeState     = useDashboardStore.getState
+  const paperModeActive = useDashboardStore((s) => s.paperModeActive)
+  const setPaperMode   = useDashboardStore((s) => s.setPaperMode)
   const [railwayInput,  setRailwayInput]  = useState(railwayUrl)
   const [railwayStatus, setRailwayStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
   const [importError,   setImportError]   = useState<string | null>(null)
@@ -207,6 +209,26 @@ export default function SettingsView() {
             <option value="dark">Dark</option>
             <option value="light">Light</option>
           </select>
+        </Field>
+        <Field label="Paper Mode">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 mr-4">
+              <p className="text-xs text-zinc-500">Blocks real money execution reminders</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPaperMode(!paperModeActive)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                paperModeActive ? 'bg-amber-500' : 'bg-zinc-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                  paperModeActive ? 'translate-x-4' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
         </Field>
       </Section>
 

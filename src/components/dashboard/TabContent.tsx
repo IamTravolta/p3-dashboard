@@ -44,6 +44,13 @@ const SourcesView        = dynamic(() => import('@/components/learnings/SourcesV
 const BriefingView       = dynamic(() => import('@/components/briefing/BriefingView'),           { loading: () => <Skeleton /> })
 const SettingsView       = dynamic(() => import('@/components/settings/SettingsView'),           { loading: () => <Skeleton /> })
 
+// ── New views ─────────────────────────────────────────────────────────────────
+const PipelineUnifiedView = dynamic(() => import('@/components/pipeline/PipelineUnifiedView'),   { loading: () => <Skeleton /> })
+const WatchToSellView     = dynamic(() => import('@/components/positions/WatchToSellView'),      { loading: () => <Skeleton /> })
+const PreAfterMarketView  = dynamic(() => import('@/components/positions/PreAfterMarketView'),   { loading: () => <Skeleton /> })
+const WinRateView         = dynamic(() => import('@/components/learnings/WinRateView'),          { loading: () => <Skeleton /> })
+const ClaudeLogView       = dynamic(() => import('@/components/learnings/ClaudeLogView'),        { loading: () => <Skeleton /> })
+
 export default function TabContent() {
   const activeGroup  = useDashboardStore((s) => s.activeGroup)
   const activeSubTab = useDashboardStore((s) => s.activeSubTab)
@@ -58,10 +65,13 @@ export default function TabContent() {
     if (activeSubTab === 'catalysts') return <CatalystView />
     if (activeSubTab === 'hedge')     return <HedgeView />
     if (activeSubTab === 'options')   return <OptionsView />
+    if (activeSubTab === 'watch-to-sell') return <WatchToSellView />
+    if (activeSubTab === 'premarket') return <PreAfterMarketView />
   }
 
   // ── Pipeline ──────────────────────────────────────────────
   if (activeGroup === 'pipeline') {
+    if (activeSubTab === 'pipeline-unified') return <PipelineUnifiedView />
     if (activeSubTab === 'ideas')        return <TradeIdeasView />
     if (activeSubTab === 'validator')    return <ValidatorView />
     if (activeSubTab === 'insider')      return <InsiderFlowView />
@@ -75,6 +85,8 @@ export default function TabContent() {
   // ── Learnings ─────────────────────────────────────────────
   if (activeGroup === 'learnings') {
     if (activeSubTab === 'signals')    return <SignalsView />
+    if (activeSubTab === 'win-rate')   return <WinRateView />
+    if (activeSubTab === 'claude-log') return <ClaudeLogView />
     if (activeSubTab === 'paper')      return <PaperTradesView />
     if (activeSubTab === 'thesis')     return <ThesisView />
     if (activeSubTab === 'behavioral') return <BehavioralView />

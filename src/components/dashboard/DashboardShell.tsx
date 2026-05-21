@@ -3,6 +3,9 @@
 import { createClient }      from '@/lib/supabase/client'
 import { useEffect, useRef, useState } from 'react'
 import { useDashboardStore } from '@/lib/store'
+import dynamic from 'next/dynamic'
+
+const TickerModal = dynamic(() => import('@/components/shared/TickerModal'), { ssr: false })
 
 // ── Sync-age label ("Sync 2m ago" / "Syncing…") ──────────────────────────────
 function SyncStatus({ isSyncing, lastFetched }: { isSyncing: boolean; lastFetched: number | null }) {
@@ -85,6 +88,8 @@ const NAV_GROUPS = [
       { id: 'catalysts',  label: 'Catalysts' },
       { id: 'hedge',      label: 'Hedge' },
       { id: 'options',    label: 'Options' },
+      { id: 'watch-to-sell', label: 'Watch to Sell' },
+      { id: 'premarket',  label: 'Pre/After Market' },
     ],
   },
   {
@@ -92,6 +97,7 @@ const NAV_GROUPS = [
     label: 'Pipeline',
     icon: '★',
     subTabs: [
+      { id: 'pipeline-unified', label: 'Pipeline' },
       { id: 'watchlist',  label: 'Watchlist' },
       { id: 'ideas',      label: 'Trade Ideas' },
       { id: 'validator',  label: 'Validator' },
@@ -109,6 +115,8 @@ const NAV_GROUPS = [
     icon: '⚗',
     subTabs: [
       { id: 'signals',    label: 'Signals' },
+      { id: 'win-rate',   label: 'Win Rate' },
+      { id: 'claude-log', label: 'Claude Log' },
       { id: 'paper',      label: 'Paper Trades' },
       { id: 'thesis',     label: 'Thesis' },
       { id: 'behavioral', label: 'Behavior' },
@@ -145,6 +153,9 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const alerts            = useDashboardStore((s) => s.alerts)
   const markAlertRead     = useDashboardStore((s) => s.markAlertRead)
   const reset             = useDashboardStore((s) => s.reset)
+  const killSwitchActive  = useDashboardStore((s) => s.killSwitchActive)
+  const setKillSwitch     = useDashboardStore((s) => s.setKillSwitch)
+  const paperModeActive   = useDashboardStore((s) => s.paperModeActive)
   const supabase = createClient()
   const [bellOpen, setBellOpen] = useState(false)
   const bellRef = useRef<HTMLDivElement>(null)
@@ -224,6 +235,19 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
             {/* Right cluster */}
             <div className="flex items-center gap-2 ml-2 shrink-0">
               <SyncStatus isSyncing={isSyncing} lastFetched={pricesLastFetched} />
+
+              {/* Kill Switch */}
+              <button
+                onClick={() => setKillSwitch(!killSwitchActive)}
+                title={killSwitchActive ? 'Kill Switch ON — click to deactivate' : 'Kill Switch OFF — click to activate'}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                  killSwitchActive
+                    ? 'bg-red-600 text-white hover:bg-red-500'
+                    : 'border border-zinc-700 bg-zinc-900 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                }`}
+              >
+                {killSwitchActive ? '⚡ KILL' : '⚡ Kill'}
+              </button>
 
               {/* Bell with dropdown */}
               <div ref={bellRef} className="relative">
@@ -307,10 +331,35 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         </div>
       </header>
 
+      {/* Kill switch banner */}
+      {killSwitchActive && (
+        <div className="sticky top-[var(--header-h,56px)] z-20 flex items-center gap-3 border-b border-red-800 bg-red-950 px-4 py-2">
+          <span className="text-red-400 font-bold text-sm">⚡ KILL SWITCH ACTIVE</span>
+          <span className="text-red-300 text-xs">All execution reminders and order prompts are suppressed.</span>
+          <button
+            onClick={() => setKillSwitch(false)}
+            className="ml-auto text-xs text-red-400 hover:text-red-200 transition"
+          >
+            Deactivate
+          </button>
+        </div>
+      )}
+
+      {/* Paper mode banner */}
+      {paperModeActive && (
+        <div className="sticky top-[var(--header-h,56px)] z-20 flex items-center gap-3 border-b border-amber-800 bg-amber-950 px-4 py-2">
+          <span className="text-amber-400 font-bold text-sm">📄 PAPER MODE</span>
+          <span className="text-amber-300 text-xs">Real money execution reminders are blocked.</span>
+        </div>
+      )}
+
       {/* Main content */}
       <main className="mx-auto max-w-screen-xl px-4 py-6">
         {children}
       </main>
+
+      {/* Ticker detail modal */}
+      <TickerModal />
     </div>
   )
 }
