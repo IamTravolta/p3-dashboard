@@ -90,8 +90,14 @@ export default function SettingsView() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  function saveRailwayUrl() {
-    setRailwayUrl(railwayInput.trim())
+  async function saveRailwayUrl() {
+    const url = railwayInput.trim()
+    setRailwayUrl(url)
+    await fetch('/api/settings', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ railwayUrl: url }),
+    })
   }
 
   async function testRailwayConnection() {

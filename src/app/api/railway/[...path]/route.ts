@@ -7,15 +7,8 @@ async function getRailwayUrl(userId: string): Promise<string> {
   if (ENV_RAILWAY_URL) return ENV_RAILWAY_URL.replace(/\/$/, '')
 
   // Fall back to URL saved in user settings
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabaseAdmin as any)
-    .from('users')
-    .select('raw_user_meta_data')
-    .eq('id', userId)
-    .single()
-    .catch(() => ({ data: null }))
-
-  const saved = data?.raw_user_meta_data?.settings?.railwayUrl as string | undefined
+  const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
+  const saved = (user?.user_metadata?.settings?.railwayUrl ?? '') as string
   return saved ? saved.replace(/\/$/, '') : ''
 }
 

@@ -19,6 +19,7 @@ export interface UserSettings {
   max_position_pct: number
   briefing_hour:    number
   theme:            'dark' | 'light'
+  railwayUrl:       string
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -27,6 +28,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   max_position_pct: 0.15,
   briefing_hour:    8,
   theme:            'dark',
+  railwayUrl:       '',
 }
 
 export async function GET() {
