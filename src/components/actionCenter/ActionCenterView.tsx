@@ -6,7 +6,7 @@
  * · Earnings Calendar · Today's Signals
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useDashboardStore, usePrices, usePositions, useWatchlist, useCash, useStats, useSignalCache } from '@/lib/store'
 import { railwayFetch } from '@/lib/utils/railwayFetch'
 import type { Position, WatchlistItem } from '@/lib/types/database'
@@ -316,11 +316,18 @@ function RiskAlerts({ positions, prices, totalValue }: {
 
 // ── Urgent Sell Alerts ─────────────────────────────────────────────────────────
 
+interface TickerExtra {
+  netSynthese:   number | null   // smart money net institutional change %
+  groteSale:     number | null   // largest insider sell in $M
+  negCount:      number          // number of negative signals found
+}
+
 function UrgentSellAlerts({ positions, prices }: {
   positions: Position[]
   prices: Record<string, number>
 }) {
   const signalCache = useDashboardStore((s) => s.signalCache)
+  const [extras, setExtras] = useState<Record<string, TickerExtra>>({})
 
   const urgentSells = positions
     .filter((p) => {
@@ -332,12 +339,62 @@ function UrgentSellAlerts({ positions, prices }: {
       return score < 45 || pnl < -15 || cachedVerdict === 'VERKOPEN'
     })
 
+  // Fetch enrichment data for each urgent position (smart money + insider)
+  useEffect(() => {
+    if (urgentSells.length === 0) return
+    urgentSells.forEach((p) => {
+      if (extras[p.ticker]) return  // already fetched
+
+      const smPromise = railwayFetch(`/api/railway/smart-money?tickers=${encodeURIComponent(p.ticker)}`)
+        .then(async (r) => {
+          if (!r.ok) return null
+          const j = await r.json()
+          const row = (j.data ?? j.results ?? []).find((x: { ticker?: string }) => x.ticker === p.ticker)
+          return row?.netChange as number | null ?? null
+        })
+        .catch(() => null)
+
+      const insiderPromise = fetch(`/api/insider?ticker=${encodeURIComponent(p.ticker)}`)
+        .then(async (r) => {
+          if (!r.ok) return null
+          const j = await r.json()
+          const sells = (j.transactions ?? []) as Array<{ transactionType: string; totalValue: number | null }>
+          const maxSell = sells
+            .filter((t) => t.transactionType === 'sell' && t.totalValue)
+            .reduce((best, t) => (t.totalValue! > best ? t.totalValue! : best), 0)
+          return maxSell > 0 ? maxSell : null
+        })
+        .catch(() => null)
+
+      Promise.all([smPromise, insiderPromise]).then(([netSynthese, groteSaleVal]) => {
+        // Count negative signals for the header
+        const score = calcScore(p)
+        const pnl = p.avgBuyPrice > 0 ? ((prices[p.ticker] ?? p.currentPrice) - p.avgBuyPrice) / p.avgBuyPrice * 100 : 0
+        let negCount = 0
+        if (score < 45)      negCount++
+        if (pnl < -15)       negCount++
+        if (netSynthese != null && netSynthese < 0) negCount++
+        if (groteSaleVal != null)                   negCount++
+
+        setExtras((prev) => ({
+          ...prev,
+          [p.ticker]: {
+            netSynthese,
+            groteSale: groteSaleVal != null ? groteSaleVal / 1_000_000 : null,  // convert to $M
+            negCount: Math.max(negCount, 1),
+          },
+        }))
+      })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urgentSells.length])
+
   if (urgentSells.length === 0) return null
 
   return (
     <div className="rounded-lg p-4" style={{ border: '1px solid var(--danger-text)', background: 'rgba(248,113,113,0.06)' }}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold" style={{ color: 'var(--danger-text)' }}>🚨 URGENTE SELL ALERTS</h3>
+        <h3 className="text-sm font-bold" style={{ color: 'var(--danger-text)' }}>⚠ URGENTE SELL ALERTS</h3>
         <span className="text-xs font-semibold rounded-full px-2 py-0.5"
           style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
           {urgentSells.length} {urgentSells.length === 1 ? 'positie' : 'posities'}
@@ -348,25 +405,49 @@ function UrgentSellAlerts({ positions, prices }: {
       </p>
       <div className="space-y-2">
         {urgentSells.map((p) => {
-          const score = calcScore(p)
+          const score    = calcScore(p)
           const livePrice = prices[p.ticker] ?? p.currentPrice
-          const pnl = p.avgBuyPrice > 0 ? ((livePrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : 0
-          const cached = signalCache[p.ticker]
+          const pnl      = p.avgBuyPrice > 0 ? ((livePrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : 0
+          const cached   = signalCache[p.ticker]
+          const ex       = extras[p.ticker]
+          const negCount = ex?.negCount ?? (score < 45 ? 2 : 1)
+
           return (
             <div key={p.ticker} className="rounded p-3"
               style={{ background: 'rgba(248,113,113,0.08)', border: '0.5px solid var(--danger-text)' }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span style={{ color: 'var(--warning-text)', fontSize: 13 }}>⚠</span>
                     <span className="font-mono font-bold text-sm" style={{ color: 'var(--danger-text)' }}>{p.ticker}</span>
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{p.name}</span>
-                    <span className="text-xs font-mono font-semibold" style={{ color: pnl >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
-                      {pnl >= 0 ? '+' : ''}{pnl.toFixed(1)}%
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>· {p.name}:</span>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--danger-text)' }}>
+                      {negCount} negatieve {negCount === 1 ? 'signaal' : 'signalen'} tegelijk
                     </span>
                   </div>
-                  <div className="space-y-0.5">
-                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>• score {score.toFixed(0)}/100</div>
-                    {cached?.verdict && (
+                  <div className="space-y-0.5 ml-1">
+                    {/* Score signal */}
+                    {score < 45 && (
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>• score {score.toFixed(0)}/100</div>
+                    )}
+                    {/* P&L signal */}
+                    {pnl < -15 && (
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>• verlies {pnl.toFixed(1)}%</div>
+                    )}
+                    {/* Net synthese from smart money */}
+                    {ex?.netSynthese != null && (
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        • net synthese {ex.netSynthese > 0 ? '+' : ''}{ex.netSynthese.toFixed(0)}
+                      </div>
+                    )}
+                    {/* Largest insider sell */}
+                    {ex?.groteSale != null && ex.groteSale > 0 && (
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        • grote verkoop ${ex.groteSale.toFixed(1)}M
+                      </div>
+                    )}
+                    {/* Cached verdict */}
+                    {cached?.verdict && cached.verdict.finalVerdict !== 'HOLD' && (
                       <div className="text-xs" style={{ color: 'var(--danger-text)' }}>
                         • verdict: {cached.verdict.finalVerdict}
                         {cached.verdict.confidence != null && ` (${cached.verdict.confidence}% conf.)`}
@@ -550,14 +631,18 @@ interface EarningsEvent {
   timing:      string
 }
 
-function EarningsCalendar({ positions }: { positions: Position[] }) {
+function EarningsCalendar({ positions, watchlist }: { positions: Position[]; watchlist: WatchlistItem[] }) {
   const [events,   setEvents]   = useState<EarningsEvent[]>([])
   const [loading,  setLoading]  = useState(false)
   const [showAll,  setShowAll]  = useState(false)
 
   useEffect(() => {
     if (positions.length === 0) return
-    const tickers = positions.map(p => p.ticker).join(',')
+    const allTickers = [
+      ...positions.map(p => p.ticker),
+      ...watchlist.map(w => w.ticker),
+    ]
+    const tickers = [...new Set(allTickers)].join(',')
     setLoading(true)
     railwayFetch(`/api/railway/earnings-calendar?tickers=${encodeURIComponent(tickers)}&days=60`)
       .then(async (r) => {
@@ -576,9 +661,16 @@ function EarningsCalendar({ positions }: { positions: Position[] }) {
   return (
     <div className="surface p-4" style={{ borderLeft: '4px solid var(--yellow-text)' }}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-bold" style={{ color: 'var(--yellow-text)' }}>📅 Earnings Calendar 60 dagen</h3>
-        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{events.length} events</span>
+        <h3 className="text-sm font-bold" style={{ color: 'var(--yellow-text)' }}>⊙ Earnings Calendar 60 dagen</h3>
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          {events.filter(e => positions.some(p => p.ticker === e.ticker)).length} portfolio · {events.filter(e => watchlist.some(w => w.ticker === e.ticker)).length} watchlist
+        </span>
       </div>
+      <p className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        Aankomende rapportages voor jouw portfolio, watchlist en Top 25 picks. Pre-earnings cooldown bij &lt; 5 dagen voorkomt impulsief kopen.{' '}
+        <strong style={{ color: 'var(--text-primary)' }}>Per stock: historische earnings-reactie (laatste 10 keer) + Play/No Play conclusie + verkoop-trigger prijzen.</strong>{' '}
+        Klik open voor volledig plan met 1d/3d/5d post-earnings beweging, risico-score en strategie.
+      </p>
       {loading && events.length === 0 ? (
         <div className="flex items-center gap-2 py-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
           <span className="h-3 w-3 rounded-full border-2 animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--yellow-text)' }} />
@@ -690,6 +782,31 @@ function LearningEngineBanner() {
   )
 }
 
+// ── Collapsible "Toon alle details" wrapper ────────────────────────────────────
+
+function DetailsSection({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <div className="surface" style={{ borderLeft: '4px solid var(--border)' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+      >
+        <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+          📋 {open ? 'Verberg' : 'Toon'} alle details + oude banners
+        </span>
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-4">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main view ──────────────────────────────────────────────────────────────────
 
 export default function ActionCenterView() {
@@ -745,23 +862,26 @@ export default function ActionCenterView() {
         <RiskAlerts positions={positions} prices={prices} totalValue={totalValue} />
       )}
 
-      {/* Learning Engine */}
-      <LearningEngineBanner />
+      {/* Collapsible details section */}
+      <DetailsSection>
+        {/* Learning Engine */}
+        <LearningEngineBanner />
 
-      {/* Daily Briefing strip */}
-      <DailyBriefingStrip />
+        {/* Daily Briefing strip */}
+        <DailyBriefingStrip />
 
-      {/* Urgent Sell Alerts */}
-      {positions.length > 0 && (
-        <UrgentSellAlerts positions={positions} prices={prices} />
-      )}
+        {/* Urgent Sell Alerts */}
+        {positions.length > 0 && (
+          <UrgentSellAlerts positions={positions} prices={prices} />
+        )}
 
-      {/* Earnings Calendar */}
-      {positions.length > 0 && (
-        <EarningsCalendar positions={positions} />
-      )}
+        {/* Earnings Calendar */}
+        {positions.length > 0 && (
+          <EarningsCalendar positions={positions} watchlist={watchlist} />
+        )}
+      </DetailsSection>
 
-      {/* Today's Signals */}
+      {/* Today's Signals — always visible */}
       {positions.length > 0 && (
         <TodaysSignals positions={positions} prices={prices} />
       )}
