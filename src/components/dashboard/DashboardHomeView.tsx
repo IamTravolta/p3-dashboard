@@ -321,47 +321,93 @@ export default function DashboardHomeView() {
 
   // ── Risk items ─────────────────────────────────────────────────────────────
 
-  const riskItems: { title: string; description: string; action: string; severity: string }[] = []
-
-  if (singleNamePct > singleNameCap) {
-    const sortedByValue = [...positions].sort(
-      (a, b) =>
-        (prices[b.ticker] ?? b.currentPrice) * b.shares -
-        (prices[a.ticker] ?? a.currentPrice) * a.shares,
-    )
-    const biggest = sortedByValue[0]
-    riskItems.push({
-      title: `${biggest?.ticker ?? 'Position'} at ${singleNamePct.toFixed(1)}% > cap ${singleNameCap}%`,
-      description: `Single-name cap exceeded by ${(singleNamePct - singleNameCap).toFixed(1)} percentage points.`,
-      action: `Trim ${biggest?.ticker ?? 'position'} to bring within cap`,
-      severity: singleNamePct > singleNameCap * 1.5 ? 'HIGH' : 'MEDIUM',
-    })
+  interface RiskBreach {
+    title:        string
+    explanation:  string
+    action:       string
+    actionDetail: string
+    severity:     'HIGH' | 'MEDIUM' | 'LOW'
   }
+  const riskItems: RiskBreach[] = []
+  const portfolioTotal = totalPortfolioValue + cash   // includes cash buffer
 
-  if (maxSectorPct > sectorCap) {
-    riskItems.push({
-      title: `Sector ${topSectorLabel} at ${maxSectorPct.toFixed(1)}% > cap ${sectorCap}%`,
-      description: `Sector concentration exceeded by ${(maxSectorPct - sectorCap).toFixed(1)} pp. Single sector shock hits full portfolio.`,
-      action: `Reduce ${topSectorLabel} exposure or add positions in other sectors`,
-      severity: maxSectorPct > sectorCap * 1.5 ? 'HIGH' : 'MEDIUM',
-    })
-  }
+  // ── 1. Single-name breaches: one card per position over cap ────────────────
+  positions.forEach((p) => {
+    const livePrice = prices[p.ticker] ?? p.currentPrice
+    const posValue  = livePrice * p.shares
+    const posWeight = portfolioTotal > 0 ? (posValue / portfolioTotal) * 100 : 0
+    if (posWeight > singleNameCap) {
+      const overPct      = posWeight - singleNameCap
+      const sharesToSell = Math.ceil((overPct / 100 * portfolioTotal) / livePrice)
+      const eurFreed     = sharesToSell * livePrice
+      riskItems.push({
+        title:        `${p.ticker} at ${posWeight.toFixed(1)}% > cap ${singleNameCap}%`,
+        explanation:  `Single-name cap exceeded by ${overPct.toFixed(1)} percentage points. Concentration risk on one position.`,
+        action:       `Trim ${sharesToSell} ${p.ticker} shares to come within cap`,
+        actionDetail: `At €${livePrice.toFixed(2)} per share = €${eurFreed.toFixed(0)} cash freed`,
+        severity:     overPct > singleNameCap * 0.5 ? 'HIGH' : 'MEDIUM',
+      })
+    }
+  })
 
+  // ── 2. Sector breaches: one card per sector over cap ───────────────────────
+  Object.entries(sectorTotals).forEach(([sec, secVal]) => {
+    const secPct  = portfolioTotal > 0 ? (secVal / portfolioTotal) * 100 : 0
+    if (secPct > sectorCap) {
+      const overPct      = secPct - sectorCap
+      const eurOver      = portfolioTotal * overPct / 100
+      const inSector     = [...positions]
+        .filter((p) => p.sector === sec)
+        .sort((a, b) => {
+          const wa = (prices[a.ticker] ?? a.currentPrice) * a.shares
+          const wb = (prices[b.ticker] ?? b.currentPrice) * b.shares
+          return wa - wb  // weakest (smallest) first for trimming suggestion
+        })
+      const weakTickers  = inSector.slice(0, 3).map((p) => p.ticker).join(', ')
+      const topTicker    = [...inSector].reverse()[0]?.ticker ?? ''
+      riskItems.push({
+        title:        `Sector ${sec} at ${secPct.toFixed(1)}% > cap ${sectorCap}%`,
+        explanation:  `Sector concentration exceeded by ${overPct.toFixed(1)} pp. A single sector shock hits your full portfolio.`,
+        action:       `Reduce by €${eurOver.toFixed(0)} (${overPct.toFixed(1)}pp). Trim weakest in sector first: ${weakTickers}`,
+        actionDetail: `Or partially sell ${topTicker} to bring sector back within cap`,
+        severity:     overPct > 20 ? 'HIGH' : 'MEDIUM',
+      })
+    }
+  })
+
+  // ── 3. USD exposure breach ─────────────────────────────────────────────────
   if (usdPct > usdCap) {
+    const overPct   = usdPct - usdCap
+    const eurToShift = portfolioTotal * overPct / 100
     riskItems.push({
-      title: `USD exposure at ${usdPct.toFixed(1)}% > cap ${usdCap}%`,
-      description: `Too much USD exposure means EUR strength directly impacts portfolio without stock changes.`,
-      action: `Shift ~€${(((usdPct - usdCap) / 100) * totalPortfolioValue).toFixed(0)} to EUR-denominated alternatives`,
-      severity: 'HIGH',
+      title:        `USD exposure ${usdPct.toFixed(1)}% > cap ${usdCap}%`,
+      explanation:  `Too much USD exposure means EUR strengthening directly impacts your portfolio without any change in the stock thesis.`,
+      action:       `Shift ~€${eurToShift.toFixed(0)} to EUR-denominated alternatives`,
+      actionDetail: `EU equivalents: ASML for semis, SAP/DSY for software, NESN for consumer staples`,
+      severity:     overPct > 15 ? 'HIGH' : 'MEDIUM',
     })
   }
 
+  // ── 4. Cash too low ────────────────────────────────────────────────────────
   if (cashPct < 5) {
+    const eurNeeded = portfolioTotal * 0.05 - cash
+    // Find winners (biggest gainers) to suggest trimming
+    const winners = [...positions]
+      .map((p) => {
+        const lp = prices[p.ticker] ?? p.currentPrice
+        return { ticker: p.ticker, gainPct: ((lp / p.avgBuyPrice) - 1) * 100 }
+      })
+      .filter((p) => p.gainPct > 15)
+      .sort((a, b) => b.gainPct - a.gainPct)
+      .slice(0, 3)
+      .map((p) => `${p.ticker} +${p.gainPct.toFixed(0)}%`)
+      .join(', ')
     riskItems.push({
-      title: `Cash at ${cashPct.toFixed(1)}% < min 5%`,
-      description: `Too little dry powder for opportunistic entry on corrections.`,
-      action: `Trim winners to build ${(5 - cashPct).toFixed(1)}% more cash buffer`,
-      severity: 'LOW',
+      title:        `Cash at ${cashPct.toFixed(1)}% < min 5%`,
+      explanation:  `Too little dry powder for opportunistic entry on corrections or crashes.`,
+      action:       `Trim winners${winners ? ` (${winners})` : ''} to build €${eurNeeded.toFixed(0)} cash`,
+      actionDetail: `At 5% cash minimum you need €${(portfolioTotal * 0.05).toFixed(0)} total — currently €${cash.toFixed(0)}`,
+      severity:     'LOW',
     })
   }
 
@@ -541,39 +587,79 @@ export default function DashboardHomeView() {
       </div>
 
       {/* ── D: Risk Mitigation Center ──────────────────────────────────────── */}
-      {riskItems.length > 0 && (
-        <div className="surface p-4" style={{ borderLeft: '4px solid var(--danger-text)' }}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--danger-text)' }}>
+      {riskItems.length === 0 ? (
+        <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--success-text)' }}>
+              ✓ Risk Mitigation
+            </h2>
+            <span className="text-xs" style={{ color: 'var(--success-text)', opacity: 0.7 }}>
+              Geen cap-breaches
+            </span>
+          </div>
+          <div className="rounded p-2.5" style={{ background: 'var(--success-bg)' }}>
+            <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>
+              Alle risk caps binnen grenzen. Portfolio is gedisciplineerd.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--warning-text)' }}>
               ⚠ Risk Mitigation Center
             </h2>
-            <span className="pill pill-danger">{riskItems.length} cap breaches</span>
+            <span className="pill pill-warning" style={{ fontSize: 10 }}>
+              {riskItems.length} cap-breach{riskItems.length > 1 ? 'es' : ''}
+            </span>
+          </div>
+          <div className="rounded p-2.5 mb-3" style={{ background: 'var(--warning-bg)' }}>
+            <div className="text-xs" style={{ color: 'var(--warning-text)', lineHeight: 1.6 }}>
+              Posities of allocaties die buiten je risk caps vallen. Per breach een concrete actie met aantal aandelen of euro&apos;s. Geen automatische uitvoering — jij beslist.
+            </div>
           </div>
           <div className="space-y-2">
-            {riskItems.map((item, i) => (
-              <div
-                key={i}
-                className="rounded p-3"
-                style={{ border: '0.5px solid var(--danger-text)', background: 'var(--danger-bg)' }}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--danger-text)' }}>
-                      {item.title}
-                    </p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                      {item.description}
-                    </p>
+            {riskItems.map((item, i) => {
+              const sev = item.severity === 'HIGH' ? 'danger' : item.severity === 'MEDIUM' ? 'warning' : 'yellow'
+              const sevLabel = item.severity === 'HIGH' ? 'HOOG' : item.severity === 'MEDIUM' ? 'MEDIUM' : 'LAAG'
+              return (
+                <div
+                  key={i}
+                  className="rounded p-3"
+                  style={{
+                    background:  `var(--${sev}-bg)`,
+                    borderLeft:  `3px solid var(--${sev}-text)`,
+                  }}
+                >
+                  {/* Header row */}
+                  <div className="flex justify-between items-start gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div style={{ fontSize: 13, fontWeight: 600, color: `var(--${sev}-text)` }}>
+                        {item.title}
+                      </div>
+                      <div className="mt-1" style={{ fontSize: 11, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                        {item.explanation}
+                      </div>
+                    </div>
+                    <span className={`pill pill-${sev}`} style={{ fontSize: 10, whiteSpace: 'nowrap' }}>
+                      {sevLabel}
+                    </span>
                   </div>
-                  <span className="pill pill-danger" style={{ fontSize: 9 }}>
-                    {item.severity}
-                  </span>
+                  {/* Concrete action box */}
+                  <div className="rounded p-2 mt-2" style={{ background: 'var(--surface)' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>
+                      Concrete actie
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: `var(--${sev}-text)` }}>
+                      → {item.action}
+                    </div>
+                    <div className="mt-1" style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {item.actionDetail}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs mt-2" style={{ color: 'var(--warning-text)' }}>
-                  → {item.action}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
