@@ -247,24 +247,33 @@ export default function DashboardHomeView() {
   const positions    = useDashboardStore((s) => s.positions)
   const watchlist    = useDashboardStore((s) => s.watchlist)
   const prices       = useDashboardStore((s) => s.prices)
-  const stats        = useDashboardStore((s) => s.stats)
+  const cash         = useDashboardStore((s) => s.cash)
+  const computeStats = useDashboardStore((s) => s.computeStats)
   const setActiveGroup  = useDashboardStore((s) => s.setActiveGroup)
   const setActiveSubTab = useDashboardStore((s) => s.setActiveSubTab)
 
-  // ── KPI derivations ────────────────────────────────────────────────────────
+  // Recompute stats on mount so KPIs are correct after page reload
+  // (stats is not persisted, so it starts null after localStorage rehydration)
+  const statsComputed = useDashboardStore((s) => s.stats)
+  if (!statsComputed && positions.length > 0) computeStats()
 
-  const totalValue = stats?.totalValue ?? 0
-  const totalPnL   = stats?.totalPnL ?? 0
-  const totalPnLPct = stats?.totalPnLPct ?? 0
-  const cashBuffer = stats?.cashBuffer ?? 0
-  const cashPct    = stats?.cashPct ?? 0
-
-  // ── Cap calculations ───────────────────────────────────────────────────────
+  // ── KPI derivations — computed directly from positions+prices ─────────────
+  // (avoids dependency on potentially-null stats after hydration)
 
   const totalPortfolioValue = positions.reduce(
     (sum, p) => sum + (prices[p.ticker] ?? p.currentPrice) * p.shares,
     0,
   )
+  const totalCost = positions.reduce(
+    (sum, p) => sum + p.avgBuyPrice * p.shares,
+    0,
+  )
+  const totalValue   = totalPortfolioValue
+  const totalPnL     = totalPortfolioValue - totalCost
+  const totalPnLPct  = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0
+  const cashBuffer   = cash
+  const totalWithCash = totalPortfolioValue + cash
+  const cashPct      = totalWithCash > 0 ? (cash / totalWithCash) * 100 : 0
 
   // Single name
   const singleNamePct =
