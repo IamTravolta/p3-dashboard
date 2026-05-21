@@ -1,143 +1,270 @@
 'use client'
 
 /**
- * Action Center — the intelligence hub
- *
- * Tells the user exactly when to act and why:
- * - BUY opportunities (watchlist items with 4+ conditions aligned)
- * - HOLD/REVIEW/SELL assessments for positions
- * - Macro regime banner
- * - Full analysis runner (demo run)
+ * Action Center — volledig herbouwde intelligence hub
+ * Mirrors the HTML reference: Risk banner · Command Center · Alerts · Briefing
+ * · Earnings Calendar · Today's Signals
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { usePrices } from '@/lib/store'
-import type { OpportunityScore, OpportunityStrength, ActionType } from '@/lib/signals/opportunity'
+import { useDashboardStore, usePrices, usePositions, useWatchlist, useCash, useStats, useSignalCache } from '@/lib/store'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
+import type { Position, WatchlistItem } from '@/lib/types/database'
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-interface MacroData {
-  regime:        string
-  regimeSummary: string
-  vix:           number | null
-  yieldSpread:   number | null
-  creditSpread:  number | null
+function fmt(n: number) { return `€${Math.round(n).toLocaleString('nl-NL')}` }
+
+function calcScore(p: { factorScores: { q: number; g: number; v: number; m: number; s: number } }) {
+  const f = p.factorScores
+  return f.q * 0.25 + f.g * 0.25 + f.v * 0.20 + f.m * 0.15 + f.s * 0.15
 }
 
-interface OpportunityResponse {
-  watchlist:  OpportunityScore[]
-  positions:  OpportunityScore[]
-  macro:      MacroData | null
-  scoredAt:   string
+function timeAgo(iso: string) {
+  const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (sec < 60)    return `${sec}s geleden`
+  if (sec < 3600)  return `${Math.floor(sec / 60)}m geleden`
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h geleden`
+  return new Date(iso).toLocaleDateString('nl-NL')
 }
 
-// ── Colour helpers ─────────────────────────────────────────────────────────────
+// ── Risk level ─────────────────────────────────────────────────────────────────
 
-const actionPillClass: Record<ActionType, string> = {
-  BUY:    'pill pill-success',
-  HOLD:   'pill pill-info',
-  REVIEW: 'pill pill-yellow',
-  SELL:   'pill pill-danger',
+type RiskLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+
+function calcRiskLevel(
+  positions: Position[],
+  prices: Record<string, number>,
+  cashPct: number,
+  totalValue: number,
+): { level: RiskLevel; breaches: Array<{ ticker: string; pct: number; cap: number }> } {
+  const singleNameCap = 12
+  const breaches: Array<{ ticker: string; pct: number; cap: number }> = []
+
+  for (const p of positions) {
+    const val = (prices[p.ticker] ?? p.currentPrice) * p.shares
+    const pct = totalValue > 0 ? (val / totalValue) * 100 : 0
+    if (pct > singleNameCap) breaches.push({ ticker: p.ticker, pct, cap: singleNameCap })
+  }
+
+  let level: RiskLevel = 'LOW'
+  if (breaches.some(b => b.pct > 20) || cashPct < 2)       level = 'CRITICAL'
+  else if (breaches.some(b => b.pct > 15) || cashPct < 5)  level = 'HIGH'
+  else if (breaches.length > 0)                             level = 'MEDIUM'
+
+  return { level, breaches }
 }
 
-const actionBorderColor: Record<ActionType, string> = {
-  BUY:    'var(--success-text)',
-  HOLD:   'var(--primary)',
-  REVIEW: 'var(--yellow-text)',
-  SELL:   'var(--danger-text)',
+const RISK_STYLE: Record<RiskLevel, { border: string; bg: string; text: string; pill: string }> = {
+  CRITICAL: { border: 'var(--danger-text)',  bg: 'rgba(248,113,113,0.1)', text: 'var(--danger-text)',  pill: 'pill-danger'  },
+  HIGH:     { border: 'var(--warning-text)', bg: 'rgba(251,146,60,0.1)',  text: 'var(--warning-text)', pill: 'pill-warning' },
+  MEDIUM:   { border: 'var(--yellow-text)',  bg: 'rgba(240,209,74,0.08)', text: 'var(--yellow-text)',  pill: 'pill-yellow'  },
+  LOW:      { border: 'var(--success-text)', bg: 'rgba(125,216,159,0.08)',text: 'var(--success-text)', pill: 'pill-success' },
 }
 
-const strengthDots: Record<OpportunityStrength, { filled: number; color: string }> = {
-  strong:   { filled: 3, color: 'bg-emerald-400' },
-  moderate: { filled: 2, color: 'bg-yellow-400'  },
-  weak:     { filled: 1, color: 'bg-amber-500'   },
-  avoid:    { filled: 0, color: 'bg-red-500'     },
-}
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
-const macroStyleMap: Record<string, { borderColor: string; bg: string; color: string }> = {
-  'risk-on':  { borderColor: 'var(--success-text)', bg: 'var(--success-bg)', color: 'var(--success-text)' },
-  'cautious': { borderColor: 'var(--yellow-text)',  bg: 'var(--yellow-bg)',  color: 'var(--yellow-text)'  },
-  'risk-off': { borderColor: 'var(--warning-text)', bg: 'var(--warning-bg)', color: 'var(--warning-text)' },
-  'crisis':   { borderColor: 'var(--danger-text)',  bg: 'var(--danger-bg)',  color: 'var(--danger-text)'  },
-}
+function RiskBanner({ positions, prices, cashPct, totalValue, cash }: {
+  positions: Position[]
+  prices: Record<string, number>
+  cashPct: number
+  totalValue: number
+  cash: number
+}) {
+  const [showBreaches, setShowBreaches] = useState(false)
+  const { level, breaches } = calcRiskLevel(positions, prices, cashPct, totalValue)
+  const s = RISK_STYLE[level]
 
-// ── Macro Banner ──────────────────────────────────────────────────────────────
+  const totalWithCash = totalValue + cash
+  const dayChange = useDashboardStore((s) => s.stats?.dayChange ?? 0)
+  const dayChangePct = useDashboardStore((s) => s.stats?.dayChangePct ?? 0)
 
-function MacroBanner({ macro }: { macro: MacroData }) {
-  const s = macroStyleMap[macro.regime] ?? { borderColor: 'var(--border)', bg: 'var(--surface)', color: 'var(--text-secondary)' }
   return (
-    <div className="rounded-xl px-4 py-3" style={{ border: `1px solid ${s.borderColor}`, background: s.bg, color: s.color }}>
-      <div className="flex items-start gap-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold uppercase tracking-wider">Macro: {macro.regime}</span>
-            {macro.vix != null && (
-              <span className="text-xs opacity-70">VIX {macro.vix.toFixed(1)}</span>
-            )}
-            {macro.yieldSpread != null && (
-              <span className="text-xs opacity-70">
-                Yield curve {macro.yieldSpread >= 0 ? '+' : ''}{macro.yieldSpread.toFixed(2)}%
-                {macro.yieldSpread < 0 ? ' ⚠ inverted' : ''}
-              </span>
-            )}
-            {macro.creditSpread != null && (
-              <span className="text-xs opacity-70">HY spread {macro.creditSpread.toFixed(2)}%</span>
-            )}
-          </div>
-          <p className="text-xs mt-1 opacity-80">{macro.regimeSummary}</p>
+    <div className="rounded-lg p-3" style={{ border: `1px solid ${s.border}`, background: s.bg }}>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-bold" style={{ color: s.text }}>
+            {level === 'CRITICAL' ? '🔴' : level === 'HIGH' ? '🟠' : level === 'MEDIUM' ? '🟡' : '🟢'} Risk Level: {level}
+          </span>
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Portfolio {fmt(totalWithCash)} · {positions.length} posities · Cash {cashPct.toFixed(1)}%
+          </span>
         </div>
+        <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+          <span>
+            Val(1d): <span style={{ color: dayChange >= 0 ? 'var(--success-text)' : 'var(--danger-text)', fontWeight: 600 }}>
+              {fmt(dayChange)} ({dayChange >= 0 ? '+' : ''}{dayChangePct.toFixed(2)}%)
+            </span>
+          </span>
+        </div>
+      </div>
+      {breaches.length > 0 && (
+        <button
+          onClick={() => setShowBreaches(v => !v)}
+          className="mt-2 text-xs"
+          style={{ color: s.text, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          📊 {breaches.length} cap-breach{breaches.length > 1 ? 'es' : ''} {showBreaches ? '▲' : '▼'}
+        </button>
+      )}
+      {showBreaches && breaches.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {breaches.map((b) => (
+            <div key={b.ticker} className="text-xs flex gap-2" style={{ color: s.text }}>
+              <span className="font-mono font-bold">{b.ticker}</span>
+              <span>≥ {b.pct.toFixed(1)}% van portfolio (max {b.cap}%)</span>
+            </div>
+          ))}
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Klik op een ticker → opent Per-Ticker analyse + Pro Trader Lens</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Command Center ─────────────────────────────────────────────────────────────
+
+function CommandCenter({ positions, watchlist, prices, totalValue }: {
+  positions: Position[]
+  watchlist: WatchlistItem[]
+  prices: Record<string, number>
+  totalValue: number
+}) {
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  // Categorise positions
+  const verkopen  = positions.filter(p => calcScore(p) < 40)
+  const afbouwen  = positions.filter(p => {
+    const score = calcScore(p)
+    const pnl = p.avgBuyPrice > 0 ? ((prices[p.ticker] ?? p.currentPrice) - p.avgBuyPrice) / p.avgBuyPrice * 100 : 0
+    return score >= 40 && score < 55 && pnl > 30
+  })
+  const kopenList = watchlist.filter(w => calcScore(w) >= 70)
+  const onderzoek = positions.filter(p => {
+    const score = calcScore(p)
+    const pnl = p.avgBuyPrice > 0 ? ((prices[p.ticker] ?? p.currentPrice) - p.avgBuyPrice) / p.avgBuyPrice * 100 : 0
+    return score >= 55 && score < 70 && pnl < -10
+  })
+
+  const l1Count = verkopen.length + afbouwen.length
+  const l2Count = onderzoek.length
+  const l3Count = kopenList.length
+  const hasUrgent = l1Count > 0
+
+  return (
+    <div className="surface p-4" style={{ borderLeft: '4px solid var(--primary)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <h2 className="text-sm font-bold" style={{ color: 'var(--primary)' }}>⚡ Command Center</h2>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+            {dateStr} · Portfolio {fmt(totalValue)} · {positions.length} posities
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs flex-wrap">
+          <span style={{ color: l1Count > 0 ? 'var(--danger-text)' : 'var(--text-tertiary)' }}>
+            {l1Count} L1 (actie)
+          </span>
+          <span style={{ color: 'var(--text-tertiary)' }}>·</span>
+          <span style={{ color: l2Count > 0 ? 'var(--warning-text)' : 'var(--text-tertiary)' }}>
+            {l2Count} L2 (monitor)
+          </span>
+          <span style={{ color: 'var(--text-tertiary)' }}>·</span>
+          <span style={{ color: l3Count > 0 ? 'var(--info-text)' : 'var(--text-tertiary)' }}>
+            {l3Count} L3 (info)
+          </span>
+        </div>
+      </div>
+
+      {/* Status banner */}
+      {hasUrgent ? (
+        <div className="rounded px-3 py-2 mb-3 flex items-center gap-2"
+          style={{ background: 'rgba(248,113,113,0.1)', border: '0.5px solid var(--danger-text)' }}>
+          <span className="text-xs font-bold" style={{ color: 'var(--danger-text)' }}>🚨 {l1Count} urgente {l1Count === 1 ? 'actie' : 'acties'} vereist — controleer onmiddellijk</span>
+        </div>
+      ) : (
+        <div className="rounded px-3 py-2 mb-3 flex items-center gap-2"
+          style={{ background: 'rgba(125,216,159,0.08)', border: '0.5px solid var(--success-text)' }}>
+          <span className="text-xs font-bold" style={{ color: 'var(--success-text)' }}>✅ Geen urgent acties vandaag — rust pakken</span>
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Geen positie met L1 conviction. Doe niets, kijk markt.</span>
+        </div>
+      )}
+
+      {/* 4-quadrant grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* VERKOPEN */}
+        <QuadrantBox
+          label="VERKOPEN"
+          count={verkopen.length}
+          color="var(--danger-text)"
+          bg="rgba(248,113,113,0.06)"
+          emptyText="Geen verkoop-signalen vandaag"
+          items={verkopen.map(p => ({ ticker: p.ticker, detail: `Score ${calcScore(p).toFixed(0)}` }))}
+        />
+        {/* AFBOUWEN */}
+        <QuadrantBox
+          label="AFBOUWEN"
+          count={afbouwen.length}
+          color="var(--warning-text)"
+          bg="rgba(251,146,60,0.06)"
+          emptyText="Geen trim-signalen"
+          items={afbouwen.map(p => {
+            const pnl = p.avgBuyPrice > 0 ? ((prices[p.ticker] ?? p.currentPrice) - p.avgBuyPrice) / p.avgBuyPrice * 100 : 0
+            return { ticker: p.ticker, detail: `+${pnl.toFixed(0)}% · score ${calcScore(p).toFixed(0)}` }
+          })}
+        />
+        {/* KOPEN / WATCHLIST */}
+        <QuadrantBox
+          label="KOPEN / WATCHLIST"
+          count={kopenList.length}
+          color="var(--success-text)"
+          bg="rgba(125,216,159,0.06)"
+          emptyText="Geen koop-signalen"
+          items={kopenList.map(w => ({ ticker: w.ticker, detail: `Score ${calcScore(w).toFixed(0)}` }))}
+        />
+        {/* ONDERZOEKEN */}
+        <QuadrantBox
+          label="ONDERZOEKEN"
+          count={onderzoek.length}
+          color="var(--yellow-text)"
+          bg="rgba(240,209,74,0.06)"
+          emptyText="Geen conflicterende signalen"
+          items={onderzoek.map(p => {
+            const pnl = p.avgBuyPrice > 0 ? ((prices[p.ticker] ?? p.currentPrice) - p.avgBuyPrice) / p.avgBuyPrice * 100 : 0
+            return { ticker: p.ticker, detail: `${pnl.toFixed(0)}% · score ${calcScore(p).toFixed(0)}` }
+          })}
+        />
       </div>
     </div>
   )
 }
 
-// ── Condition dots ─────────────────────────────────────────────────────────────
-
-function ScoreDots({ score, max = 6, strength }: { score: number; max?: number; strength: OpportunityStrength }) {
-  const { color } = strengthDots[strength]
-  return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: max }).map((_, i) => (
-        <div
-          key={i}
-          className={`h-2 w-2 rounded-full transition-all ${i < Math.round(score) ? color : ''}`}
-          style={i < Math.round(score) ? {} : { background: 'var(--border)' }}
-        />
-      ))}
-      <span className="ml-1.5 text-xs font-mono" style={{ color: 'var(--text-tertiary)' }}>{score}/{max}</span>
-    </div>
-  )
-}
-
-// ── Condition checklist ────────────────────────────────────────────────────────
-
-function ConditionList({ conditions, defaultExpanded = false }: {
-  conditions: OpportunityScore['conditions']
-  defaultExpanded?: boolean
+function QuadrantBox({ label, count, color, bg, emptyText, items }: {
+  label: string
+  count: number
+  color: string
+  bg: string
+  emptyText: string
+  items: Array<{ ticker: string; detail: string }>
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
   return (
-    <div>
-      <button
-        onClick={() => setExpanded((e) => !e)}
-        className="text-[10px] transition"
-        style={{ color: 'var(--text-tertiary)' }}
-      >
-        {expanded ? '▲ Hide conditions' : '▼ Show conditions'}
-      </button>
-      {expanded && (
-        <div className="mt-2 space-y-1.5">
-          {conditions.map((c, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <span className="mt-0.5 shrink-0 text-xs font-bold" style={{
-                color: c.met ? 'var(--success-text)' : c.partial ? 'var(--yellow-text)' : 'var(--danger-text)',
-              }}>
-                {c.met ? '✓' : c.partial ? '~' : '✕'}
-              </span>
-              <div className="flex-1 min-w-0">
-                <span className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
-                <span className="text-[10px] ml-1.5" style={{ color: 'var(--text-tertiary)' }}>{c.detail}</span>
-              </div>
+    <div className="rounded-lg p-3" style={{ background: bg, border: `0.5px solid ${color}20` }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
+        <span className="text-xs font-mono font-bold rounded-full px-2 py-0.5"
+          style={{ background: count > 0 ? color : 'var(--surface)', color: count > 0 ? '#000' : 'var(--text-tertiary)' }}>
+          {count}
+        </span>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{emptyText}</p>
+      ) : (
+        <div className="space-y-1">
+          {items.map((item) => (
+            <div key={item.ticker} className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs font-bold" style={{ color }}>{item.ticker}</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{item.detail}</span>
             </div>
           ))}
         </div>
@@ -146,174 +273,419 @@ function ConditionList({ conditions, defaultExpanded = false }: {
   )
 }
 
-// ── Opportunity Card ──────────────────────────────────────────────────────────
+// ── Risk Alerts ────────────────────────────────────────────────────────────────
 
-function OpportunityCard({ item }: { item: OpportunityScore }) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <div
-      className="surface px-4 py-4 space-y-3"
-      style={{ borderLeft: `4px solid ${actionBorderColor[item.action]}`, borderRadius: 12 }}
-    >
-      {/* Header row */}
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-mono text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{item.ticker}</span>
-            <span className={actionPillClass[item.action]}>
-              {item.action}
-            </span>
-            <span className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{item.type === 'watchlist' ? 'Watchlist' : 'Position'}</span>
-            {item.pnlPct !== undefined && (
-              <span className="text-xs font-mono font-semibold" style={{ color: item.pnlPct >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
-                {item.pnlPct >= 0 ? '+' : ''}{item.pnlPct.toFixed(1)}%
-              </span>
-            )}
-          </div>
-          <p className="text-xs leading-snug" style={{ color: 'var(--text-secondary)' }}>{item.headline}</p>
-        </div>
-        <ScoreDots score={item.score} strength={item.strength} />
-      </div>
-
-      {/* Reasoning */}
-      <p className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>{item.reasoning}</p>
-
-      {/* Conditions */}
-      <ConditionList conditions={item.conditions} defaultExpanded={expanded} />
-
-      {/* Price */}
-      {item.price != null && (
-        <p className="text-[10px] tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-          Live price: {item.price.toFixed(2)} · Scored {new Date(item.scoredAt).toLocaleTimeString()}
-        </p>
-      )}
-    </div>
-  )
-}
-
-// ── Section ────────────────────────────────────────────────────────────────────
-
-function Section({
-  title, subtitle, items, emptyText, titleColor = 'var(--text-secondary)',
-}: {
-  title:      string
-  subtitle:   string
-  items:      OpportunityScore[]
-  emptyText:  string
-  titleColor?: string
+function RiskAlerts({ positions, prices, totalValue }: {
+  positions: Position[]
+  prices: Record<string, number>
+  totalValue: number
 }) {
-  if (items.length === 0) return (
-    <div>
-      <h3 className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: titleColor }}>{title}</h3>
-      <p className="text-xs italic" style={{ color: 'var(--text-tertiary)' }}>{emptyText}</p>
-    </div>
-  )
+  const { breaches } = calcRiskLevel(positions, prices, 0, totalValue)
+  if (breaches.length === 0) return null
+
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: titleColor }}>{title}</h3>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{subtitle}</p>
+    <div className="rounded-lg p-4" style={{ border: '1px solid var(--warning-text)', background: 'var(--warning-bg)' }}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold" style={{ color: 'var(--warning-text)' }}>⚠ RISK ALERTS ({breaches.length})</h3>
+        <span className="text-xs" style={{ color: 'var(--warning-text)', opacity: 0.7 }}>Cap breaches</span>
       </div>
-      {items.map((item) => (
-        <OpportunityCard key={`${item.type}-${item.ticker}`} item={item} />
-      ))}
+      <div className="space-y-1.5">
+        {breaches
+          .sort((a, b) => b.pct - a.pct)
+          .map((b) => (
+            <div key={b.ticker} className="flex items-center gap-3">
+              <span className="font-mono text-xs font-bold w-16 shrink-0" style={{ color: 'var(--warning-text)' }}>{b.ticker}</span>
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+                <div className="h-full rounded-full" style={{
+                  width: `${Math.min((b.pct / 30) * 100, 100)}%`,
+                  background: b.pct > 20 ? 'var(--danger-text)' : 'var(--warning-text)',
+                }} />
+              </div>
+              <span className="text-xs font-mono shrink-0" style={{ color: b.pct > 20 ? 'var(--danger-text)' : 'var(--warning-text)' }}>
+                {b.pct.toFixed(1)}% <span style={{ color: 'var(--text-tertiary)' }}>(max {b.cap}%)</span>
+              </span>
+            </div>
+          ))}
+      </div>
+      <p className="text-xs mt-3" style={{ color: 'var(--text-tertiary)' }}>
+        Klik op een ticker → opent Per-Ticker analyse + Pro Trader Lens
+      </p>
     </div>
   )
 }
 
-// ── Full Analysis Runner ──────────────────────────────────────────────────────
+// ── Urgent Sell Alerts ─────────────────────────────────────────────────────────
 
-function FullAnalysisRunner({ onComplete }: { onComplete: () => void }) {
-  const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
-  const [result, setResult] = useState<{
-    processed: number; succeeded: number; failed: number;
-    verdicts?: Array<{ ticker: string; verdict: string }>
-    macro?: { regime: string; summary: string }
-  } | null>(null)
-  const [errMsg, setErrMsg] = useState<string | null>(null)
+function UrgentSellAlerts({ positions, prices }: {
+  positions: Position[]
+  prices: Record<string, number>
+}) {
+  const signalCache = useDashboardStore((s) => s.signalCache)
 
-  async function run() {
-    setStatus('running')
-    setResult(null)
-    setErrMsg(null)
-    try {
-      const resp = await fetch('/api/analyze/bulk', { method: 'POST' })
-      const j    = await resp.json()
-      if (!resp.ok) throw new Error(j.error ?? 'Bulk analysis failed')
-      setResult(j)
-      setStatus('done')
-      onComplete()
-    } catch (e: unknown) {
-      setErrMsg(e instanceof Error ? e.message : 'Something went wrong')
-      setStatus('error')
-    }
-  }
+  const urgentSells = positions
+    .filter((p) => {
+      const score = calcScore(p)
+      const pnl = p.avgBuyPrice > 0
+        ? ((prices[p.ticker] ?? p.currentPrice) - p.avgBuyPrice) / p.avgBuyPrice * 100
+        : 0
+      const cachedVerdict = signalCache[p.ticker]?.verdict?.finalVerdict
+      return score < 45 || pnl < -15 || cachedVerdict === 'VERKOPEN'
+    })
+
+  if (urgentSells.length === 0) return null
 
   return (
-    <div className="surface p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-lg p-4" style={{ border: '1px solid var(--danger-text)', background: 'rgba(248,113,113,0.06)' }}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold" style={{ color: 'var(--danger-text)' }}>🚨 URGENTE SELL ALERTS</h3>
+        <span className="text-xs font-semibold rounded-full px-2 py-0.5"
+          style={{ background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
+          {urgentSells.length} {urgentSells.length === 1 ? 'positie' : 'posities'}
+        </span>
+      </div>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+        Deze posities hebben meerdere negatieve signalen tegelijk. Het systeem verkoopt nooit voor je. Direct controleren en zelf beslissen.
+      </p>
+      <div className="space-y-2">
+        {urgentSells.map((p) => {
+          const score = calcScore(p)
+          const livePrice = prices[p.ticker] ?? p.currentPrice
+          const pnl = p.avgBuyPrice > 0 ? ((livePrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : 0
+          const cached = signalCache[p.ticker]
+          return (
+            <div key={p.ticker} className="rounded p-3"
+              style={{ background: 'rgba(248,113,113,0.08)', border: '0.5px solid var(--danger-text)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-mono font-bold text-sm" style={{ color: 'var(--danger-text)' }}>{p.ticker}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{p.name}</span>
+                    <span className="text-xs font-mono font-semibold" style={{ color: pnl >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
+                      {pnl >= 0 ? '+' : ''}{pnl.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>• score {score.toFixed(0)}/100</div>
+                    {cached?.verdict && (
+                      <div className="text-xs" style={{ color: 'var(--danger-text)' }}>
+                        • verdict: {cached.verdict.finalVerdict}
+                        {cached.verdict.confidence != null && ` (${cached.verdict.confidence}% conf.)`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className="pill pill-danger shrink-0" style={{ fontSize: 10 }}>Verkooprisico</span>
+              </div>
+              <p className="text-xs mt-2 font-medium" style={{ color: 'var(--danger-text)' }}>
+                → Direct controleren — verkopen, gedeelte verkopen of stop loss aanscherpen
+              </p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Today's Signals ────────────────────────────────────────────────────────────
+
+interface SignalItem {
+  ticker:    string
+  type:      string
+  title:     string
+  detail:    string
+  action:    'Verkooprisico' | 'Vasthouden' | 'Kans' | 'Aandacht'
+  severity:  'danger' | 'success' | 'info' | 'warning'
+}
+
+function TodaysSignals({ positions, prices }: {
+  positions: Position[]
+  prices:    Record<string, number>
+}) {
+  const [signals,   setSignals]   = useState<SignalItem[]>([])
+  const [loading,   setLoading]   = useState(false)
+  const [showAll,   setShowAll]   = useState(false)
+  const signalCache = useDashboardStore((s) => s.signalCache)
+
+  // Build signals from available cache + local computations
+  useEffect(() => {
+    const items: SignalItem[] = []
+    for (const p of positions) {
+      const score    = calcScore(p)
+      const livePrice = prices[p.ticker] ?? p.currentPrice
+      const pnl       = p.avgBuyPrice > 0 ? ((livePrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : 0
+      const cached    = signalCache[p.ticker]
+      const verdict   = cached?.verdict?.finalVerdict
+
+      if (verdict === 'VERKOPEN' || score < 40) {
+        items.push({
+          ticker: p.ticker, type: 'Score Alert',
+          title: `Zwak score ${score.toFixed(0)} op ${p.ticker}`,
+          detail: `Score onder verkoopdrempel. P&L: ${pnl.toFixed(1)}%. Directe evaluatie nodig.`,
+          action: 'Verkooprisico', severity: 'danger',
+        })
+      } else if (pnl > 75 || verdict === 'AFBOUWEN') {
+        items.push({
+          ticker: p.ticker, type: 'Trim Alert',
+          title: `${p.ticker} in trim-zone (+${pnl.toFixed(0)}%)`,
+          detail: `Positie sterk gestegen. Overweeg gedeeltelijk verkopen om winst veilig te stellen.`,
+          action: 'Verkooprisico', severity: 'warning',
+        })
+      } else if (score >= 70 && pnl > 0) {
+        items.push({
+          ticker: p.ticker, type: 'Positief',
+          title: `Sterke positie ${p.ticker} — score ${score.toFixed(0)}`,
+          detail: `Thesis intact. ${pnl.toFixed(1)}% rendement. Bijkopen onder buy zone overwegen.`,
+          action: 'Vasthouden', severity: 'success',
+        })
+      }
+    }
+
+    // Supplement with railway signal data if available
+    setSignals(items)
+  }, [positions, prices, signalCache])
+
+  // Also try to fetch from railway
+  useEffect(() => {
+    if (positions.length === 0) return
+    const tickers = positions.map(p => p.ticker).join(',')
+    setLoading(true)
+    railwayFetch(`/api/railway/signals/today?tickers=${encodeURIComponent(tickers)}`)
+      .then(async (r) => {
+        if (!r.ok) return
+        const j = await r.json()
+        const railwaySignals: SignalItem[] = (j.signals ?? []).map((s: {
+          ticker?: string; type?: string; title?: string; detail?: string; action?: string; severity?: string
+        }) => ({
+          ticker:   s.ticker   ?? '',
+          type:     s.type     ?? 'Signaal',
+          title:    s.title    ?? '',
+          detail:   s.detail   ?? '',
+          action:   (s.action  ?? 'Aandacht') as SignalItem['action'],
+          severity: (s.severity ?? 'info')    as SignalItem['severity'],
+        }))
+        if (railwaySignals.length > 0) setSignals(railwaySignals)
+      })
+      .catch(() => {/* silent — use local signals */})
+      .finally(() => setLoading(false))
+  }, [positions.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (signals.length === 0 && !loading) return null
+
+  const shown = showAll ? signals : signals.slice(0, 5)
+
+  return (
+    <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+      <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Full Portfolio Analysis</h3>
+          <h3 className="text-sm font-bold" style={{ color: 'var(--info-text)' }}>◆ Vandaag de belangrijkste signalen</h3>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-            Runs the complete intelligence pipeline on every position and watchlist item —
-            technical signals, fundamentals, macro context, and insider data.
-            Takes 1–2 minutes depending on portfolio size.
+            Wat speelt er en wat kun je overwegen. Het systeem koopt of verkoopt nooit voor je. Jij beslist altijd zelf.
           </p>
         </div>
-        <button
-          onClick={run}
-          disabled={status === 'running'}
-          className="btn btn-primary shrink-0 flex items-center gap-2 disabled:opacity-50"
-        >
-          {status === 'running' ? (
-            <>
-              <span className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              Analysing…
-            </>
-          ) : (
-            'Run Full Analysis'
-          )}
-        </button>
+        {signals.length > 0 && (
+          <span className="pill pill-info" style={{ fontSize: 10 }}>{signals.length} signalen actief</span>
+        )}
       </div>
 
-      {status === 'done' && result && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-semibold" style={{ color: 'var(--success-text)' }}>
-              ✓ {result.succeeded}/{result.processed} items analysed
-            </span>
-            {result.macro && (
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Macro: <span style={{ color: 'var(--text-primary)' }}>{result.macro.regime}</span>
-              </span>
-            )}
-            {result.failed > 0 && (
-              <span className="text-xs" style={{ color: 'var(--warning-text)' }}>{result.failed} failed (price data unavailable)</span>
-            )}
-          </div>
-          {result.verdicts && result.verdicts.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {result.verdicts.map((v) => (
-                <span
-                  key={v.ticker}
-                  className={`pill ${
-                    v.verdict === 'BUY'  ? 'pill-success' :
-                    v.verdict === 'SELL' ? 'pill-danger' :
-                                          'pill-yellow'
-                  }`}
-                >
-                  {v.ticker}: {v.verdict}
-                </span>
-              ))}
-            </div>
-          )}
+      {loading && signals.length === 0 && (
+        <div className="flex items-center gap-2 py-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
+          <span className="h-3 w-3 rounded-full border-2 animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
+          Signalen ophalen…
         </div>
       )}
 
-      {status === 'error' && (
-        <p className="text-xs" style={{ color: 'var(--danger-text)' }}>{errMsg}</p>
+      <div className="space-y-2">
+        {shown.map((sig, i) => {
+          const border = sig.severity === 'danger' ? 'var(--danger-text)'
+            : sig.severity === 'warning' ? 'var(--warning-text)'
+            : sig.severity === 'success' ? 'var(--success-text)'
+            : 'var(--info-text)'
+          const bg = sig.severity === 'danger' ? 'rgba(248,113,113,0.06)'
+            : sig.severity === 'warning' ? 'rgba(251,146,60,0.06)'
+            : sig.severity === 'success' ? 'rgba(125,216,159,0.06)'
+            : 'rgba(96,165,250,0.06)'
+          const badgeClass = `pill pill-${sig.severity}`
+
+          return (
+            <div key={i} className="rounded-lg p-3" style={{ border: `0.5px solid ${border}`, background: bg }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-mono font-bold text-xs" style={{ color: border }}>{sig.ticker}</span>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{sig.title}</span>
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{sig.detail}</p>
+                </div>
+                <span className={`${badgeClass} shrink-0`} style={{ fontSize: 10 }}>{sig.action}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {signals.length > 5 && (
+        <button
+          onClick={() => setShowAll(v => !v)}
+          className="mt-3 text-xs"
+          style={{ color: 'var(--info-text)', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          {showAll ? '▲ Minder tonen' : `▼ Toon alle ${signals.length} signalen`}
+        </button>
       )}
+    </div>
+  )
+}
+
+// ── Earnings Calendar ──────────────────────────────────────────────────────────
+
+interface EarningsEvent {
+  date:        string
+  ticker:      string
+  name:        string
+  epsEst:      number | null
+  epsActual:   number | null
+  conclusion:  string
+  context:     string
+  timing:      string
+}
+
+function EarningsCalendar({ positions }: { positions: Position[] }) {
+  const [events,   setEvents]   = useState<EarningsEvent[]>([])
+  const [loading,  setLoading]  = useState(false)
+  const [showAll,  setShowAll]  = useState(false)
+
+  useEffect(() => {
+    if (positions.length === 0) return
+    const tickers = positions.map(p => p.ticker).join(',')
+    setLoading(true)
+    railwayFetch(`/api/railway/earnings-calendar?tickers=${encodeURIComponent(tickers)}&days=60`)
+      .then(async (r) => {
+        if (!r.ok) return
+        const j = await r.json()
+        setEvents(j.events ?? j.data ?? [])
+      })
+      .catch(() => {/* silent */})
+      .finally(() => setLoading(false))
+  }, [positions.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (events.length === 0 && !loading) return null
+
+  const shown = showAll ? events : events.slice(0, 5)
+
+  return (
+    <div className="surface p-4" style={{ borderLeft: '4px solid var(--yellow-text)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold" style={{ color: 'var(--yellow-text)' }}>📅 Earnings Calendar 60 dagen</h3>
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{events.length} events</span>
+      </div>
+      {loading && events.length === 0 ? (
+        <div className="flex items-center gap-2 py-4 text-xs" style={{ color: 'var(--text-secondary)' }}>
+          <span className="h-3 w-3 rounded-full border-2 animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--yellow-text)' }} />
+          Earnings calendar ophalen…
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
+                  {['Datum', 'Naam', 'EPS est.', 'Conclusie', 'Context', 'Timing'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((e, i) => (
+                  <tr key={i} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                    <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{e.date}</td>
+                    <td className="px-3 py-2.5 font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{e.ticker}</td>
+                    <td className="px-3 py-2.5 font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {e.epsEst != null ? `$${e.epsEst.toFixed(2)}` : '—'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="pill pill-info" style={{ fontSize: 9 }}>{e.conclusion}</span>
+                    </td>
+                    <td className="px-3 py-2.5 max-w-xs" style={{ color: 'var(--text-secondary)' }}>{e.context}</td>
+                    <td className="px-3 py-2.5" style={{ color: 'var(--text-tertiary)' }}>{e.timing}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {events.length > 5 && (
+            <button
+              onClick={() => setShowAll(v => !v)}
+              className="mt-2 text-xs"
+              style={{ color: 'var(--yellow-text)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              {showAll ? '▲ Minder tonen' : `▼ Toon overige ${events.length - 5} earnings`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Briefing strip ─────────────────────────────────────────────────────────────
+
+function DailyBriefingStrip() {
+  const [text,    setText]    = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/briefing')
+      .then(async (r) => {
+        if (!r.ok) return
+        const j = await r.json()
+        setText(j.briefing?.content ?? null)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return null
+  if (!text)   return null
+
+  // Show first 3 sentences only
+  const preview = text.split(/[.!?]/).filter(Boolean).slice(0, 3).join('. ') + '.'
+
+  return (
+    <div className="rounded-lg p-4" style={{ background: 'rgba(139,92,246,0.08)', border: '0.5px solid rgba(139,92,246,0.4)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-bold" style={{ color: 'rgba(167,139,250,1)' }}>★ Daily AI Briefing</h3>
+        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Gegenereerd op basis van vandaag&apos;s signalen</span>
+      </div>
+      <p className="text-xs leading-relaxed" style={{ color: 'rgba(221,214,254,0.85)' }}>{preview}</p>
+    </div>
+  )
+}
+
+// ── Learning Engine banner ─────────────────────────────────────────────────────
+
+function LearningEngineBanner() {
+  const [count, setCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/verdicts')
+      .then(async (r) => {
+        if (!r.ok) return
+        const j = await r.json()
+        const rows = j.data ?? j.verdicts ?? []
+        setCount(rows.length)
+      })
+      .catch(() => {})
+  }, [])
+
+  if (count === null) return null
+
+  return (
+    <div className="rounded px-3 py-2 text-xs" style={{ background: 'rgba(125,216,159,0.06)', border: '0.5px solid var(--success-text)' }}>
+      <span style={{ color: 'var(--success-text)' }}>🎓 Learning Engine actief: </span>
+      <span style={{ color: 'var(--text-secondary)' }}>
+        {count} verdicts gelogd voor evaluatie. Eerste reliability-scores beschikbaar na 30 dagen.
+      </span>
     </div>
   )
 }
@@ -321,152 +693,85 @@ function FullAnalysisRunner({ onComplete }: { onComplete: () => void }) {
 // ── Main view ──────────────────────────────────────────────────────────────────
 
 export default function ActionCenterView() {
-  const prices = usePrices()
+  const positions = usePositions()
+  const watchlist = useWatchlist()
+  const prices    = usePrices()
+  const cash      = useCash()
+  const stats     = useStats()
 
-  const [data,       setData]       = useState<OpportunityResponse | null>(null)
-  const [loading,    setLoading]    = useState(true)
-  const [lastScored, setLastScored] = useState<string | null>(null)
-  const [errMsg,     setErrMsg]     = useState<string | null>(null)
+  const totalValue    = stats?.totalValue ?? 0
+  const totalWithCash = totalValue + cash
+  const cashPct       = totalWithCash > 0 ? (cash / totalWithCash) * 100 : 0
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setErrMsg(null)
-    try {
-      const pricesParam = encodeURIComponent(JSON.stringify(prices))
-      const resp  = await fetch(`/api/opportunity?prices=${pricesParam}`)
-      const json  = await resp.json()
-      if (!resp.ok) throw new Error(json.error ?? 'Failed to load')
-      setData(json)
-      setLastScored(new Date().toLocaleTimeString())
-    } catch (e: unknown) {
-      setErrMsg(e instanceof Error ? e.message : 'Failed to load opportunity data')
-    } finally {
-      setLoading(false)
-    }
-  }, [JSON.stringify(prices)]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { load() }, [load])
-
-  // Categorise
-  const buyOpportunities  = (data?.watchlist ?? []).filter((w) => w.action === 'BUY')
-  const watchOpportunities = (data?.watchlist ?? []).filter((w) => w.action !== 'BUY')
-  const holdPositions     = (data?.positions ?? []).filter((p) => p.action === 'HOLD')
-  const reviewPositions   = (data?.positions ?? []).filter((p) => p.action === 'REVIEW')
-  const sellPositions     = (data?.positions ?? []).filter((p) => p.action === 'SELL')
-
-  const totalActionable = buyOpportunities.length + reviewPositions.length + sellPositions.length
+  // Summary chips
+  const { breaches } = calcRiskLevel(positions, prices, cashPct, totalValue)
+  const aandacht = positions.filter(p => calcScore(p) < 55).length + breaches.length
+  const positief = positions.filter(p => calcScore(p) >= 70).length
+  const kans     = watchlist.filter(w => calcScore(w) >= 70).length
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
 
       {/* Header */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <div className="flex justify-between items-start gap-3 flex-wrap">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◆ Action Center</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Daily signals that need your attention, in plain language</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>
+              Dagelijkse signalen die om jouw aandacht vragen, in simpele taal
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {lastScored && (
-              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Scored {lastScored}</span>
-            )}
-            {totalActionable > 0 && (
-              <span className="pill pill-info">
-                {totalActionable} items need attention
-              </span>
-            )}
-            <button
-              onClick={load}
-              disabled={loading}
-              className="btn disabled:opacity-50"
-            >
-              {loading ? 'Refreshing…' : 'Refresh'}
-            </button>
-          </div>
-        </div>
-        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
-          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>
-            Prioritized list of actions across all modules. High urgency items appear first. Dismiss when actioned.
+          {/* Summary chips */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {aandacht > 0 && <span className="pill pill-warning">{aandacht} aandacht</span>}
+            {positief > 0 && <span className="pill pill-success">{positief} positief</span>}
+            {kans > 0     && <span className="pill pill-info">{kans} kans</span>}
           </div>
         </div>
       </div>
 
-      {/* Full analysis runner */}
-      <FullAnalysisRunner onComplete={load} />
-
-      {/* Macro banner */}
-      {data?.macro && <MacroBanner macro={data.macro} />}
-
-      {/* Loading / error */}
-      {loading && !data && (
-        <div className="py-12 text-center">
-          <div className="mx-auto h-6 w-6 rounded-full border-2 animate-spin mb-3" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Scoring opportunities across your portfolio…</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Fetching fundamentals, macro data, and insider activity</p>
-        </div>
+      {/* Risk banner */}
+      {positions.length > 0 && (
+        <RiskBanner positions={positions} prices={prices} cashPct={cashPct} totalValue={totalValue} cash={cash} />
       )}
 
-      {errMsg && (
-        <div className="rounded-xl px-4 py-3 text-sm" style={{ border: '1px solid var(--danger-text)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
-          {errMsg}
-        </div>
+      {/* Command Center */}
+      {positions.length > 0 && (
+        <CommandCenter positions={positions} watchlist={watchlist} prices={prices} totalValue={totalValue} />
       )}
 
-      {/* Content */}
-      {data && !loading && (
-        <div className="space-y-10">
+      {/* Risk Alerts */}
+      {positions.length > 0 && (
+        <RiskAlerts positions={positions} prices={prices} totalValue={totalValue} />
+      )}
 
-          {/* BUY opportunities */}
-          <Section
-            title="Buy Opportunities"
-            subtitle="Watchlist items where 4+ conditions are aligned — now is the right time to look closely"
-            items={buyOpportunities}
-            emptyText="No watchlist items have 4+ conditions aligned right now. Add items to your watchlist to track them."
-            titleColor="var(--success-text)"
-          />
+      {/* Learning Engine */}
+      <LearningEngineBanner />
 
-          {/* Positions needing action */}
-          {(sellPositions.length > 0 || reviewPositions.length > 0) && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--danger-text)' }}>Position Alerts</h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Positions where the thesis may be weakening or broken</p>
-              </div>
-              {[...sellPositions, ...reviewPositions].map((item) => (
-                <OpportunityCard key={`pos-${item.ticker}`} item={item} />
-              ))}
-            </div>
-          )}
+      {/* Daily Briefing strip */}
+      <DailyBriefingStrip />
 
-          {/* Healthy positions */}
-          {holdPositions.length > 0 && (
-            <Section
-              title="Holding — Thesis Intact"
-              subtitle="Positions where conditions remain healthy — continue holding"
-              items={holdPositions}
-              emptyText="No positions to display."
-              titleColor="var(--info-text)"
-            />
-          )}
+      {/* Urgent Sell Alerts */}
+      {positions.length > 0 && (
+        <UrgentSellAlerts positions={positions} prices={prices} />
+      )}
 
-          {/* Watchlist monitoring */}
-          {watchOpportunities.length > 0 && (
-            <Section
-              title="Watchlist — Not Yet"
-              subtitle="Conditions not yet aligned — continue monitoring"
-              items={watchOpportunities}
-              emptyText=""
-              titleColor="var(--text-secondary)"
-            />
-          )}
+      {/* Earnings Calendar */}
+      {positions.length > 0 && (
+        <EarningsCalendar positions={positions} />
+      )}
 
-          {/* All clear */}
-          {data.watchlist.length === 0 && data.positions.length === 0 && (
-            <div className="rounded-xl py-12 text-center" style={{ border: '1px dashed var(--border)' }}>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No positions or watchlist items found.</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Add stocks to your portfolio or watchlist to get started.</p>
-            </div>
-          )}
+      {/* Today's Signals */}
+      {positions.length > 0 && (
+        <TodaysSignals positions={positions} prices={prices} />
+      )}
+
+      {/* Empty state */}
+      {positions.length === 0 && (
+        <div className="surface py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
+          <p className="text-3xl mb-3">◆</p>
+          <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Geen posities gevonden</h3>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Voeg posities toe aan je portfolio om de Action Center te activeren.</p>
         </div>
       )}
     </div>
