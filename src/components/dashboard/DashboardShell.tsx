@@ -71,6 +71,14 @@ interface DashboardShellProps {
 
 const NAV_GROUPS = [
   {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: '',
+    subTabs: [
+      { id: 'dashboard-home', label: 'Home' },
+    ],
+  },
+  {
     id: 'action',
     label: 'Intelligence',
     icon: '◉',

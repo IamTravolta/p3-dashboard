@@ -50,10 +50,14 @@ const WatchToSellView     = dynamic(() => import('@/components/positions/WatchTo
 const PreAfterMarketView  = dynamic(() => import('@/components/positions/PreAfterMarketView'),   { loading: () => <Skeleton /> })
 const WinRateView         = dynamic(() => import('@/components/learnings/WinRateView'),          { loading: () => <Skeleton /> })
 const ClaudeLogView       = dynamic(() => import('@/components/learnings/ClaudeLogView'),        { loading: () => <Skeleton /> })
+const DashboardHomeView   = dynamic(() => import('@/components/dashboard/DashboardHomeView'),    { loading: () => <Skeleton /> })
 
 export default function TabContent() {
   const activeGroup  = useDashboardStore((s) => s.activeGroup)
   const activeSubTab = useDashboardStore((s) => s.activeSubTab)
+
+  // ── Dashboard ─────────────────────────────────────────────
+  if (activeGroup === 'dashboard' || activeSubTab === 'dashboard-home') return <DashboardHomeView />
 
   // ── Intelligence ──────────────────────────────────────────
   if (activeGroup === 'action') return <ActionCenterView />
