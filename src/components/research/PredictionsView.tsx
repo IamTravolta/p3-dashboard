@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { Activity, AlertTriangle, Clock } from 'lucide-react'
@@ -46,7 +47,7 @@ export default function PredictionsView() {
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch('/api/railway/prediction-markets')
+      const res  = await railwayFetch('/api/railway/prediction-markets')
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`)
       setMarkets(Array.isArray(json) ? json : json.markets ?? json.data ?? [])

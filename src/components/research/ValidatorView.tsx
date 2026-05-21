@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState, useMemo } from 'react'
 import { ShieldCheck, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
@@ -148,7 +149,7 @@ export default function ValidatorView() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/railway/trade-validator', {
+      const res = await railwayFetch('/api/railway/trade-validator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), action, thesis }),

@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { Building2, AlertTriangle } from 'lucide-react'
@@ -51,7 +52,7 @@ export default function SmartMoneyView() {
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch(`/api/railway/smartmoney/aggregate?tickers=${encodeURIComponent(tickers)}`)
+      const res  = await railwayFetch(`/api/railway/smartmoney/aggregate?tickers=${encodeURIComponent(tickers)}`)
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`)
       setResults(Array.isArray(json) ? json : json.data ?? json.results ?? [])

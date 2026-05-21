@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { usePositions, usePrices, useStats, useRailwayUrl } from '@/lib/store'
@@ -146,7 +147,7 @@ export default function HedgeView() {
   async function getHedgeSuggestions() {
     setFetchState({ status: 'loading' })
     try {
-      const resp = await fetch('/api/railway/hedge/suggestions', {
+      const resp = await railwayFetch('/api/railway/hedge/suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tickers }),

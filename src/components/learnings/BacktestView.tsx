@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { useDashboardStore } from '@/lib/store'
@@ -42,7 +43,7 @@ export default function BacktestView() {
     setError(null)
     setResult(null)
     try {
-      const resp = await fetch('/api/railway/backtest/score', {
+      const resp = await railwayFetch('/api/railway/backtest/score', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ timeframe, metric, positions }),

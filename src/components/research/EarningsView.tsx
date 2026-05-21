@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { FileText, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
@@ -43,7 +44,7 @@ export default function EarningsView() {
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch('/api/railway/earnings-transcript/bulk', {
+      const res  = await railwayFetch('/api/railway/earnings-transcript/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tickers }),

@@ -3,10 +3,15 @@ import { requireUser, supabaseAdmin } from '@/lib/auth'
 
 const ENV_RAILWAY_URL = process.env.RAILWAY_BACKEND_URL ?? ''
 
-async function getRailwayUrl(userId: string): Promise<string> {
+async function getRailwayUrl(userId: string, req: NextRequest): Promise<string> {
+  // 1. Header injected by railwayFetch() on the client — most reliable
+  const headerUrl = req.headers.get('x-railway-url')
+  if (headerUrl) return headerUrl.replace(/\/$/, '')
+
+  // 2. Server-side env var (set at deployment time)
   if (ENV_RAILWAY_URL) return ENV_RAILWAY_URL.replace(/\/$/, '')
 
-  // Fall back to URL saved in user settings
+  // 3. Fall back to URL saved in Supabase user settings
   const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
   const saved = (user?.user_metadata?.settings?.railwayUrl ?? '') as string
   return saved ? saved.replace(/\/$/, '') : ''
@@ -20,7 +25,7 @@ async function handler(
   if ('response' in _auth) return _auth.response
   const { userId } = _auth
 
-  const railwayUrl = await getRailwayUrl(userId)
+  const railwayUrl = await getRailwayUrl(userId, req)
 
   if (!railwayUrl) {
     return NextResponse.json(

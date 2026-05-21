@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Save, RefreshCw, Download, Upload, Link, Plus, Trash2, Mail } from 'lucide-react'
@@ -110,7 +111,7 @@ export default function SettingsView() {
   async function testRailwayConnection() {
     setRailwayStatus('testing')
     try {
-      const resp = await fetch('/api/railway/health')
+      const resp = await railwayFetch('/api/railway/health')
       setRailwayStatus(resp.ok ? 'ok' : 'error')
     } catch {
       setRailwayStatus('error')

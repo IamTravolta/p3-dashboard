@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { Grid3x3, AlertTriangle } from 'lucide-react'
@@ -44,7 +45,7 @@ export default function CorrelationsView() {
       params.set('tickers', tickers.join(','))
       if (sectors.length) params.set('sectors', sectors.join(','))
 
-      const res  = await fetch(`/api/railway/correlations?${params}`)
+      const res  = await railwayFetch(`/api/railway/correlations?${params}`)
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`)
 

@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { usePositions, useRailwayUrl } from '@/lib/store'
@@ -101,7 +102,7 @@ function CatalystCard({ ticker }: { ticker: string }) {
   async function fetchCatalysts() {
     setState({ loading: true, error: null, data: null })
     try {
-      const resp = await fetch(`/api/railway/catalysts?tickers=${encodeURIComponent(ticker)}`)
+      const resp = await railwayFetch(`/api/railway/catalysts?tickers=${encodeURIComponent(ticker)}`)
       const json = await resp.json()
       if (!resp.ok) {
         setState({ loading: false, error: json.error ?? `HTTP ${resp.status}`, data: null })

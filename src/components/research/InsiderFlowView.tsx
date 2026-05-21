@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { Users, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react'
@@ -52,7 +53,7 @@ export default function InsiderFlowView() {
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch(`/api/railway/insider-flow?tickers=${encodeURIComponent(tickers)}`)
+      const res  = await railwayFetch(`/api/railway/insider-flow?tickers=${encodeURIComponent(tickers)}`)
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`)
       const rows: InsiderRow[] = Array.isArray(json) ? json : json.rows ?? json.data ?? []

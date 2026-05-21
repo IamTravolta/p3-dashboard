@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState, useCallback } from 'react'
 import { RefreshCw } from 'lucide-react'
@@ -91,7 +92,7 @@ export default function SourcesView() {
       .catch(() => ({ stooq: 'ERROR' as SourceStatus, fmp: 'ERROR' as SourceStatus }))
 
     // Check Railway (and derive Polymarket/SEC from it)
-    const railwayPromise = fetch('/api/railway/health')
+    const railwayPromise = railwayFetch('/api/railway/health')
       .then((r) => {
         if (r.status === 404 || r.status === 503) return 'NOT CONFIGURED' as SourceStatus
         return r.ok ? 'CONNECTED' : 'ERROR' as SourceStatus

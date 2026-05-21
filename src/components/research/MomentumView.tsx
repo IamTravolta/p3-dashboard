@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { TrendingUp, AlertTriangle } from 'lucide-react'
@@ -38,7 +39,7 @@ export default function MomentumView() {
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch('/api/railway/weekly-movers')
+      const res  = await railwayFetch('/api/railway/weekly-movers')
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`)
 

@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { Lightbulb, AlertTriangle } from 'lucide-react'
@@ -50,7 +51,7 @@ export default function TradeIdeasView() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/railway/trade-ideas', {
+      const res = await railwayFetch('/api/railway/trade-ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

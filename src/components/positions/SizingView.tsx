@@ -1,4 +1,5 @@
 'use client'
+import { railwayFetch } from '@/lib/utils/railwayFetch'
 
 import { useState } from 'react'
 import { usePositions, usePrices, useStats, useSettings, useCash, useRailwayUrl } from '@/lib/store'
@@ -200,7 +201,7 @@ export default function SizingView() {
         value,
         conviction: position.conviction,
       }))
-      const resp = await fetch('/api/railway/position-sizing', {
+      const resp = await railwayFetch('/api/railway/position-sizing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ portfolio: portfolioData, totalValue }),
