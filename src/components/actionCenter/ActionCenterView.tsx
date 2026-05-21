@@ -363,8 +363,8 @@ export default function ActionCenterView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◉ Intelligence Center</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>When to act and why — updated on every price refresh</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◆ Action Center</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Daily signals that need your attention, in plain language</div>
           </div>
           <div className="flex items-center gap-3">
             {lastScored && (
@@ -386,7 +386,7 @@ export default function ActionCenterView() {
         </div>
         <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
           <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>
-            Scores your entire portfolio and watchlist against 6 key conditions — technical, fundamental, macro, insider, momentum, and valuation. Items with 4+ conditions aligned are highlighted for action.
+            Prioritized list of actions across all modules. High urgency items appear first. Dismiss when actioned.
           </div>
         </div>
       </div>

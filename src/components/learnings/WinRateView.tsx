@@ -38,8 +38,15 @@ export default function WinRateView() {
     <div className="space-y-5">
       {/* Header */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>🏆 Signal Win Rate</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.85 }}>Accuracy of verdicts evaluated at 30-day mark</div>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>📈 Win Rate</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Signal accuracy by type — which ones actually work</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Tracks outcomes for each signal type. Win = signal direction confirmed after 5/20 days. Based on all logged and resolved verdicts.</div>
+        </div>
       </div>
 
       {loading && (

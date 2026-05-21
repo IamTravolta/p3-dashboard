@@ -64,13 +64,16 @@ export default function EarningsView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📄 Earnings Analysis</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>AI-powered earnings transcript analysis</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📊 Earnings Deep Dive (AI)</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Fundamental earnings analysis via Claude over last 4 quarters</div>
           </div>
           <button onClick={analyze} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <FileText size={13} />
             {loading ? 'Analyzing…' : 'Analyze Earnings'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Per ticker: last 4 quarter reports, analysis on revenue trajectory, margin trends, balance sheet health, cash flow quality, anomalies and KPI wins/concerns.</div>
         </div>
       </div>
 

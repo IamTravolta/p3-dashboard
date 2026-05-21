@@ -70,13 +70,16 @@ export default function SmartMoneyView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🏦 Smart Money</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>Institutional ownership and hedge fund activity</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>💎 Smart Money</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.7 }}>Institutional ownership (13F filings) + insider flow combined in composite score</div>
           </div>
           <button onClick={analyze} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <Building2 size={13} />
             {loading ? 'Analyzing…' : 'Analyze Smart Money'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--purple-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--purple-text)', lineHeight: 1.6 }}>Composite score (0-100) per ticker. Factors: # 13F filers change, total $ invested, share count shift, insider net flow. ≥75 = STRONG BUY, ≤25 = STRONG SELL.</div>
         </div>
       </div>
 

@@ -101,13 +101,16 @@ export default function MomentumView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>📈 Weekly Momentum</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.85 }}>Top movers and momentum signals</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>🚀 Weekly Momentum Tracker</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Weekly scan of top gainers with fundamental check + cross-signal validation</div>
           </div>
           <button onClick={fetch_} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <TrendingUp size={13} />
             {loading ? 'Fetching…' : 'Fetch Momentum'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Filters top 25 gainers with market cap &gt;$2B. Per ticker: 1w/1m/3m return + volume ratio + cross-signals. Claude categorizes: 🟢 real candidates / 🟡 investigate / 🔴 FOMO.</div>
         </div>
       </div>
 

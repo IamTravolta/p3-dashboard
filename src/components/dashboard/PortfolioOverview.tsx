@@ -83,6 +83,19 @@ export default function PortfolioOverview({ initialPositions }: PortfolioOvervie
 
   return (
     <div className="space-y-5">
+      {/* Section header */}
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ Portfolio Overview</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Portfolio positions with live prices and factor scores</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Live prices refresh every 60s. Factor scores (Q/G/V/M/S) drive conviction. Click any row to drill down.</div>
+        </div>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Portfolio Value"

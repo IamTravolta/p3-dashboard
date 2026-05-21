@@ -162,10 +162,8 @@ export default function PipelineUnifiedView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>🚦 Pipeline</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.85 }}>
-              Unified view of watchlist and positions ranked by signal strength
-            </div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>★ Pipeline · Unified View</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>All opportunities sorted by signal strength: HOT / WARM / COOL</div>
           </div>
           <button
             onClick={runBulkAnalysis}
@@ -181,6 +179,9 @@ export default function PipelineUnifiedView() {
               'Run Full Analysis'
             )}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Three sources combined per candidate: Watchlist (your triggers), Trade Ideas (Claude proactive), SP500 Discovery (screener + Claude eval).</div>
         </div>
       </div>
 

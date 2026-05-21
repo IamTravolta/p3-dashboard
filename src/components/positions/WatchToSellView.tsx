@@ -61,8 +61,15 @@ export default function WatchToSellView() {
     return (
       <div className="space-y-4">
         <div className="surface p-4" style={{ borderLeft: '4px solid var(--danger-text)' }}>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>⚠ Watch to Sell</h1>
-          <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.85 }}>Positions flagged for exit review</div>
+          <div className="flex justify-between items-start gap-3 flex-wrap">
+            <div>
+              <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>↓ Watch to Sell</h1>
+              <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.7 }}>Early warning layer for your positions · before hard stop-loss</div>
+            </div>
+          </div>
+          <div className="rounded p-2.5 mt-3" style={{ background: 'var(--danger-bg)' }}>
+            <div className="text-xs" style={{ color: 'var(--danger-text)', lineHeight: 1.6 }}>Positions with weakening profile or hard sell trigger. Status classes: Sell (red), Trim (orange), Watch (yellow). Stable positions don't appear here.</div>
+          </div>
         </div>
         <div className="rounded-xl py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
           <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>No positions flagged for exit</p>
@@ -77,14 +84,14 @@ export default function WatchToSellView() {
   return (
     <div className="space-y-4">
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--danger-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>⚠ Watch to Sell</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.85 }}>
-          {flagged.length} position{flagged.length !== 1 ? 's' : ''} flagged for exit review
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>↓ Watch to Sell</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.7 }}>Early warning layer for your positions · before hard stop-loss</div>
+          </div>
         </div>
         <div className="rounded p-2.5 mt-3" style={{ background: 'var(--danger-bg)' }}>
-          <div className="text-xs" style={{ color: 'var(--danger-text)', lineHeight: 1.6 }}>
-            Positions with SELL verdicts, low-confidence HOLDs, or factor scores below 4 are listed here for your review.
-          </div>
+          <div className="text-xs" style={{ color: 'var(--danger-text)', lineHeight: 1.6 }}>Positions with weakening profile or hard sell trigger. Status classes: Sell (red), Trim (orange), Watch (yellow). Stable positions don't appear here.</div>
         </div>
       </div>
 

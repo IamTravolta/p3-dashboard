@@ -159,9 +159,16 @@ export default function SettingsView() {
       )}
 
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>⚙️ Settings</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Customise your dashboard behaviour and signal weights</div>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--primary)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--primary)' }}>⚙ Settings</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--primary)', opacity: 0.7 }}>Platform configuration and preferences</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'rgba(91,141,238,0.08)' }}>
+          <div className="text-xs" style={{ color: 'var(--primary)', lineHeight: 1.6 }}>Configure Railway backend, API keys, signal weights, risk parameters, and notification preferences.</div>
+        </div>
       </div>
 
       {/* Railway Backend */}

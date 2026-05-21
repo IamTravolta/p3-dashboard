@@ -66,16 +66,19 @@ export default function CorrelationsView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--teal-text)' }}>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--teal-text)' }}>🔗 Correlations</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--teal-text)', opacity: 0.85 }}>Understand how your positions move together</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>⟡ Correlations Analysis</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.7 }}>Claude AI reasoning · news events → portfolio impact · 4 domains</div>
           </div>
           <button onClick={calculate} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <Grid3x3 size={13} />
             {loading ? 'Calculating…' : 'Calculate'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--purple-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--purple-text)', lineHeight: 1.6 }}>System scans news in 4 domains (energy, commodities, tech, geopolitics), filters significant events and sends to Claude AI for reasoning.</div>
         </div>
       </div>
 

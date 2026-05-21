@@ -199,8 +199,15 @@ export default function CatalystView() {
     <div className="space-y-5">
       {/* Header */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ Catalyst Calendar</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Track upcoming events that may move your positions</div>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📅 Catalyst Calendar</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Earnings + macro events · 60 days ahead · play/no-play hints</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Per event: ticker · type · date · days away · expected move %, play recommendation (hold through / hedge / trim / strangle). Cache: 4 hours.</div>
+        </div>
       </div>
 
       {/* Backend banner */}

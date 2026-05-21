@@ -104,11 +104,11 @@ export default function SourcesView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--teal-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>🔌 Data Sources</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Quality and freshness of your data connections</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--teal-text)' }}>⊕ Sources & Data</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--teal-text)', opacity: 0.7 }}>Which sources feed which modules · status · costs</div>
           </div>
           <button
             onClick={checkAll}
@@ -118,6 +118,9 @@ export default function SourcesView() {
             <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
             Refresh Status
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--teal-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--teal-text)', lineHeight: 1.6 }}>Overview of all data sources, their update frequency, API costs, and which modules they power.</div>
         </div>
       </div>
 

@@ -58,8 +58,15 @@ export default function ValidatorView() {
     <div className="max-w-2xl space-y-5">
       {/* Header */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--danger-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>🛡 Trade Validator</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.85 }}>Validate a trade before executing</div>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--danger-text)' }}>🔍 Trade Validator · Critical Committee</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--danger-text)', opacity: 0.7 }}>Paste your trade proposals. The committee critically challenges them.</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--danger-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--danger-text)', lineHeight: 1.6 }}>Per ticker: conviction, red-flag score, timing, R/R ratio, final status (BUY/STAGED/WAIT/SKIP), alternative allocation. Cost ~€0.15 per call.</div>
+        </div>
       </div>
 
       {/* Backend not configured */}

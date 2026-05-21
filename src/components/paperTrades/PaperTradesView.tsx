@@ -73,11 +73,11 @@ export default function PaperTradesView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>📝 Paper Trades</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.85 }}>Simulated trades to test ideas before committing capital</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>📄 Paper Trades</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Simulated trades to test ideas before going live</div>
           </div>
           <button
             onClick={() => setShowAdd(true)}
@@ -85,6 +85,9 @@ export default function PaperTradesView() {
           >
             <Plus size={14} /> New trade
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Track paper trades alongside real ones. Compare paper vs real performance to calibrate your decision-making.</div>
         </div>
       </div>
 

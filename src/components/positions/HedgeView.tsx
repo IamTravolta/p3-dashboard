@@ -193,12 +193,14 @@ export default function HedgeView() {
     <div className="space-y-6">
       {/* Header */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>🛡 Hedge Suggestions</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.85 }}>Protect your portfolio against macro risks and sharp drawdowns</div>
-        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--warning-bg)' }}>
-          <div className="text-xs" style={{ color: 'var(--warning-text)', lineHeight: 1.6 }}>
-            Review portfolio hedging strategies and get AI-powered recommendations tailored to your factor exposures.
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>🛡 Risk-Off Hedge Builder</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.7 }}>Hedge suggestions based on macro regime + portfolio exposure</div>
           </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--warning-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--warning-text)', lineHeight: 1.6 }}>Per hedge: ticker · type (inverse ETF / vol / defensive / safe-haven) · recommended allocation %, annual cost, expected protection, unwind trigger.</div>
         </div>
       </div>
 

@@ -74,13 +74,16 @@ export default function TradeIdeasView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>💡 Trade Ideas</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>AI-generated opportunities based on your portfolio and market conditions</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>★ AI Trade Ideas</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.7 }}>Claude analyzes your full dashboard and suggests 3-5 concrete trade ideas</div>
           </div>
           <button onClick={generate} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <Lightbulb size={13} />
             Generate Ideas
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--purple-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--purple-text)', lineHeight: 1.6 }}>Per idea: ticker, type (buy/short/option), conviction 1-5, bull/bear case, catalyst, entry/stop/target, position size. Cost ~€0.05 per regeneration.</div>
         </div>
       </div>
 

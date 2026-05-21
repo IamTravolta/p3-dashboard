@@ -100,11 +100,11 @@ export default function ClaudeLogView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>🤖 Claude Log</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>All AI verdicts generated for your tickers</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>📋 Claude Log</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Full verdict history with filters and outcome evaluation</div>
           </div>
           <button
             onClick={evaluateOutcomes}
@@ -118,6 +118,9 @@ export default function ClaudeLogView() {
               </>
             ) : 'Evaluate Outcomes'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>All AI verdicts logged with ticker, action, conviction, timestamp. Evaluate Outcomes runs batch tracking on pending entries.</div>
         </div>
       </div>
 

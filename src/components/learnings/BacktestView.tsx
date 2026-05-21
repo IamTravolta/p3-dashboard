@@ -60,9 +60,16 @@ export default function BacktestView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📈 Backtest</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Test your scoring model against historical data</div>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>⏮ Backtest</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.7 }}>Historical strategy simulation on your current criteria</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--purple-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--purple-text)', lineHeight: 1.6 }}>Simulates how your current signal weights and entry criteria would have performed historically.</div>
+        </div>
       </div>
 
       {/* Controls */}

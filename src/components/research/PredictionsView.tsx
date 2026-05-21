@@ -63,13 +63,16 @@ export default function PredictionsView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🎯 Prediction Markets</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>Live Polymarket odds for macro events</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>🌐 Prediction Markets (Live Polymarket)</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.7 }}>Live macro signals from Polymarket. Recession / Fed rates / CPI / Tariffs odds.</div>
           </div>
           <button onClick={fetch_} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <Activity size={13} />
             {loading ? 'Fetching…' : 'Fetch Markets'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--purple-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--purple-text)', lineHeight: 1.6 }}>Live data via Polymarket public API (free). Recession &gt;60% = bearish cyclical tech. Fed rate cut &gt;70% = bullish growth. CPI hot &gt;50% = bias defensive.</div>
         </div>
       </div>
 

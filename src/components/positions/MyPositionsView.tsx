@@ -461,8 +461,15 @@ export default function MyPositionsView() {
     return (
       <div className="space-y-4">
         <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ My Positions</h1>
-          <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Track and analyse your open portfolio positions</div>
+          <div className="flex justify-between items-start gap-3 flex-wrap">
+            <div>
+              <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ Positions · Unified Verdict</h1>
+              <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>All positions with council + sizing + sell signals combined</div>
+            </div>
+          </div>
+          <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+            <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Per position: Council verdict (HOLD/TRIM/EXIT), Sell trigger (score-based), Kelly sizing (ADD/HOLD/TRIM). Highest urgency wins.</div>
+          </div>
         </div>
         <div className="rounded-xl py-16 text-center" style={{ border: '1px dashed var(--border)' }}>
           <p className="text-3xl mb-3">📊</p>
@@ -481,8 +488,8 @@ export default function MyPositionsView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ My Positions</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Track and analyse your open portfolio positions</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ Positions · Unified Verdict</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>All positions with council + sizing + sell signals combined</div>
           </div>
           {stats && (
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
@@ -492,6 +499,9 @@ export default function MyPositionsView() {
               </span>
             </span>
           )}
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Per position: Council verdict (HOLD/TRIM/EXIT), Sell trigger (score-based), Kelly sizing (ADD/HOLD/TRIM). Highest urgency wins.</div>
         </div>
       </div>
 

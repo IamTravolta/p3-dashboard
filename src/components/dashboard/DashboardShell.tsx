@@ -211,8 +211,13 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
           {/* Primary row */}
           <div className="flex items-center gap-2 py-2.5">
             {/* Logo */}
-            <span className="text-base font-bold tracking-tight shrink-0" style={{ color: 'var(--text-primary)' }}>P3</span>
-            <span className="hidden text-xs sm:block mr-3" style={{ color: 'var(--text-tertiary)' }}>Portfolio Platform</span>
+            <div className="flex flex-col items-center justify-center shrink-0 mr-2" style={{ width: 30, height: 30, border: '1.5px solid var(--primary)', borderRadius: 8 }}>
+              <span className="text-xs font-bold leading-none" style={{ color: 'var(--primary)' }}>P3</span>
+            </div>
+            <div className="hidden sm:flex flex-col mr-3">
+              <span className="text-xs font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>P3</span>
+              <span className="text-[10px] leading-tight" style={{ color: 'var(--text-tertiary)' }}>Portfolio Platform</span>
+            </div>
 
             {/* Primary group nav */}
             <nav className="flex items-center gap-0.5 overflow-x-auto flex-1 scrollbar-none">
@@ -309,6 +314,25 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Theme switcher */}
+              <div className="hidden sm:inline-flex items-center" style={{ gap: 1, padding: 2, border: '0.5px solid var(--border)', borderRadius: 6 }}>
+                {(['☀', '◐', '●'] as const).map((icon, i) => (
+                  <button
+                    key={icon}
+                    title={['Light (coming soon)', 'Medium', 'OLED'][i]}
+                    disabled={i !== 1}
+                    style={{
+                      width: 28, height: 28, border: 'none', cursor: i === 1 ? 'default' : 'not-allowed',
+                      borderRadius: 4, fontSize: 13,
+                      background: i === 1 ? 'var(--primary)' : 'transparent',
+                      color: i === 1 ? 'white' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {icon}
+                  </button>
+                ))}
               </div>
 
               <span className="hidden text-xs sm:block max-w-[140px] truncate" style={{ color: 'var(--text-tertiary)' }}>{user.email}</span>

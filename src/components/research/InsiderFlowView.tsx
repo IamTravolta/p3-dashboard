@@ -76,13 +76,16 @@ export default function InsiderFlowView() {
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--warning-text)' }}>
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>👤 Insider Flow</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.85 }}>SEC Form 4 insider buying and selling activity</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--warning-text)' }}>⚡ Insider Flow — last 30 days</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--warning-text)', opacity: 0.7 }}>Aggregate of all SEC Form 4 transactions (officers + directors + 10%-owners)</div>
           </div>
           <button onClick={fetch_} disabled={loading} className="btn btn-primary flex items-center gap-1.5 disabled:opacity-50">
             <Users size={13} />
             {loading ? 'Fetching…' : 'Fetch Insider Data'}
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--warning-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--warning-text)', lineHeight: 1.6 }}>When management sells without a public trigger, they usually know something you don&apos;t. Bulk cluster sells (CEO + CFO + multiple directors) is a red flag.</div>
         </div>
       </div>
 

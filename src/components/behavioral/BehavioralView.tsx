@@ -88,11 +88,11 @@ export default function BehavioralView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>🧠 Behavioral Intelligence</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Track when you follow or override AI recommendations — and the outcome</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>🧠 Behavioral</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Track behavioral biases and decision patterns</div>
           </div>
           <button
             onClick={() => setShowLog(true)}
@@ -100,6 +100,9 @@ export default function BehavioralView() {
           >
             <Brain size={14} /> Log decision
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Log and review behavioral patterns. Identify systematic biases (FOMO, loss aversion, anchoring) before they impact performance.</div>
         </div>
       </div>
 

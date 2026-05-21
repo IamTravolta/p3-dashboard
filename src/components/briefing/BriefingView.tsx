@@ -79,7 +79,7 @@ export default function BriefingView() {
         <div className="flex justify-between items-start gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📰 Daily Briefing</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>AI-generated portfolio &amp; market summary — cached for 4 hours</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Morning briefing — macro + portfolio + signals combined</div>
           </div>
           <button
             onClick={() => load(true)}
@@ -89,6 +89,9 @@ export default function BriefingView() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             Regenerate
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Generated each morning with macro context, position updates, and upcoming catalysts. Customizable delivery time in Settings.</div>
         </div>
       </div>
 

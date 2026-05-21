@@ -48,11 +48,11 @@ export default function ThesisView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--purple-text)' }}>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold" style={{ color: 'var(--purple-text)' }}>📖 Thesis Tracker</h1>
-            <div className="text-xs mt-1" style={{ color: 'var(--purple-text)', opacity: 0.85 }}>Versioned investment theses per position or watchlist item</div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>📖 Thesis</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Investment thesis per position — your reasoning documented</div>
           </div>
           <button
             onClick={() => setShowAdd(true)}
@@ -60,6 +60,9 @@ export default function ThesisView() {
           >
             <Plus size={14} /> New thesis
           </button>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Write and track your investment thesis for each position. Revisit when signals change to see if your original reasoning still holds.</div>
         </div>
       </div>
 

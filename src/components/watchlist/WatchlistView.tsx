@@ -126,6 +126,19 @@ export default function WatchlistView() {
 
   return (
     <div className="space-y-4">
+      {/* Section header */}
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>◆ Stocks to Watch</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Stocks you&apos;re following and may want to buy</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Per stock, four trigger criteria. When all four are hit, a buy-ready signal appears.</div>
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

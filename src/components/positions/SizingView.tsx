@@ -227,8 +227,15 @@ export default function SizingView() {
     <div className="space-y-6">
       {/* Header */}
       <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>◇ Position Sizing</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>Review position weights vs your concentration caps and identify rebalancing opportunities</div>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>⚖ Position Sizing (Kelly)</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.7 }}>Kelly Criterion risk-adjusted allocation based on conviction</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--info-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--info-text)', lineHeight: 1.6 }}>Per position: conviction (50% score + 35% smart money + 15% macro fit) × expected return / sector variance. Kelly formula with fractional multiplier.</div>
+        </div>
       </div>
 
       {/* Settings panel */}

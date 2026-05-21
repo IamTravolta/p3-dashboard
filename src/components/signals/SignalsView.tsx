@@ -110,9 +110,16 @@ export default function SignalsView() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="surface p-4" style={{ borderLeft: '4px solid var(--info-text)' }}>
-        <h1 className="text-xl font-semibold" style={{ color: 'var(--info-text)' }}>📡 Signal History</h1>
-        <div className="text-xs mt-1" style={{ color: 'var(--info-text)', opacity: 0.85 }}>All AI verdicts, module signals, and accuracy tracking</div>
+      <div className="surface p-4" style={{ borderLeft: '4px solid var(--success-text)' }}>
+        <div className="flex justify-between items-start gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--success-text)' }}>⊙ Signals</h1>
+            <div className="text-xs mt-1" style={{ color: 'var(--success-text)', opacity: 0.7 }}>Which signals are working? Win-rate and average return per type.</div>
+          </div>
+        </div>
+        <div className="rounded p-2.5 mt-3" style={{ background: 'var(--success-bg)' }}>
+          <div className="text-xs" style={{ color: 'var(--success-text)', lineHeight: 1.6 }}>Every significant signal is automatically logged with current price. After 1d/5d/20d the outcome is automatically measured.</div>
+        </div>
       </div>
 
       {/* Signal reliability */}
