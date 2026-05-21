@@ -52,43 +52,22 @@ export function useWatchlistData() {
     if (items.length === 0) return
     setSyncing(true)
     try {
-      // Fetch Stooq directly from browser (server-side proxy is blocked by Stooq)
-      const SUFFIX: Record<string, string> = {
-        NYSE: '', NASDAQ: '', AMEX: '',
-        LSE: '.UK', AMS: '.NL', EURONEXT: '.NL',
-        XETRA: '.DE', EPA: '.FR', TSX: '.CA', ASX: '.AU',
-      }
-      const symToTicker: Record<string, string> = {}
-      const symbols = items.map((w) => {
-        const suffix = SUFFIX[w.exchange?.toUpperCase() ?? ''] ?? ''
-        const sym = `${w.ticker.toLowerCase()}${suffix}`
-        symToTicker[sym] = w.ticker
-        return sym
-      })
+      // Use server-side proxy to avoid browser CORS restrictions
+      const tickerParam = items
+        .map((w) => w.exchange ? `${w.ticker}:${w.exchange}` : w.ticker)
+        .join(',')
 
-      const url  = `https://stooq.com/q/l/?f=sd2t2ohlcvp&h&e=csv&s=${symbols.join(',')}`
-      const resp = await fetch(url)
+      const resp = await fetch(`/api/prices?tickers=${encodeURIComponent(tickerParam)}`)
       if (!resp.ok) return
 
-      const csv   = await resp.text()
-      const lines = csv.trim().split('\n')
-      const prices:     Record<string, number> = {}
-      const prevPrices: Record<string, number> = {}
-
-      for (let i = 1; i < lines.length; i++) {
-        const cols   = lines[i].trim().split(',')
-        if (cols.length < 7) continue
-        const sym    = cols[0].toLowerCase()
-        const ticker = symToTicker[sym] ?? sym.toUpperCase()
-        const close  = parseFloat(cols[6])
-        const prev   = parseFloat(cols[8] ?? 'NaN')
-        if (!isNaN(close) && close > 0) {
-          prices[ticker]    = close
-          if (!isNaN(prev) && prev > 0) prevPrices[ticker] = prev
-        }
+      const { prices, prevPrices } = await resp.json() as {
+        prices:     Record<string, number>
+        prevPrices: Record<string, number>
       }
 
-      setPrices(prices, prevPrices)
+      if (Object.keys(prices).length > 0) {
+        setPrices(prices, prevPrices ?? {})
+      }
 
       // Check for price and score trigger crossings
       const existingAlerts = useDashboardStore.getState().alerts

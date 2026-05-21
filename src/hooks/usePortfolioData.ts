@@ -57,53 +57,29 @@ export function usePortfolioData() {
     }
   }, [setLoading, setPositions])
 
-  // ── Refresh live prices — fetch Stooq directly from browser ─────────────────
-  // Stooq blocks server-side requests (Next.js API route IPs are blacklisted).
-  // The HTML reference fetches Stooq from the browser; we replicate that here.
+  // ── Refresh live prices via server-side proxy ───────────────────────────────
+  // The /api/prices route calls Stooq server-side (using the user's local machine IP
+  // on dev, or their production server IP). This avoids browser CORS restrictions.
   const refreshPrices = useCallback(async (pos: Position[]) => {
     if (pos.length === 0) return
     setSyncing(true)
     try {
-      const prices:     Record<string, number> = {}
-      const prevPrices: Record<string, number> = {}
+      // Build "TICKER:EXCHANGE" list for the API route
+      const tickerParam = pos
+        .map((p) => p.exchange ? `${p.ticker}:${p.exchange}` : p.ticker)
+        .join(',')
 
-      // Exchange suffix map — mirrors stooq.ts
-      const SUFFIX: Record<string, string> = {
-        NYSE: '', NASDAQ: '', AMEX: '',
-        LSE: '.UK', AMS: '.NL', EURONEXT: '.NL',
-        XETRA: '.DE', EPA: '.FR', TSX: '.CA', ASX: '.AU',
-      }
-      // symbol → ticker reverse map
-      const symToTicker: Record<string, string> = {}
-      const symbols = pos.map((p) => {
-        const suffix = SUFFIX[p.exchange?.toUpperCase() ?? ''] ?? ''
-        const sym = `${p.ticker.toLowerCase()}${suffix}`
-        symToTicker[sym] = p.ticker
-        return sym
-      })
+      const resp = await fetch(`/api/prices?tickers=${encodeURIComponent(tickerParam)}`)
+      if (!resp.ok) throw new Error(`/api/prices HTTP ${resp.status}`)
 
-      const url = `https://stooq.com/q/l/?f=sd2t2ohlcvp&h&e=csv&s=${symbols.join(',')}`
-      const resp = await fetch(url)
-      if (!resp.ok) throw new Error(`Stooq HTTP ${resp.status}`)
-
-      const csv   = await resp.text()
-      const lines = csv.trim().split('\n')
-
-      // Skip header (line 0), parse data rows
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].trim().split(',')
-        if (cols.length < 7) continue
-        const sym    = cols[0].toLowerCase()
-        const ticker = symToTicker[sym] ?? sym.toUpperCase()
-        const close  = parseFloat(cols[6])
-        const prev   = parseFloat(cols[8] ?? 'NaN')
-        if (!isNaN(close) && close > 0) {
-          prices[ticker]    = close
-          if (!isNaN(prev) && prev > 0) prevPrices[ticker] = prev
-        }
+      const { prices, prevPrices } = await resp.json() as {
+        prices:     Record<string, number>
+        prevPrices: Record<string, number>
       }
 
-      setPrices(prices, prevPrices)
+      if (Object.keys(prices).length > 0) {
+        setPrices(prices, prevPrices ?? {})
+      }
 
       // Check for stop-loss threshold crossings
       const existingAlerts = useDashboardStore.getState().alerts
