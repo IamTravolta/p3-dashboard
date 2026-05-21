@@ -3,6 +3,8 @@
 import { createClient }      from '@/lib/supabase/client'
 import { useEffect, useRef, useState } from 'react'
 import { useDashboardStore } from '@/lib/store'
+import { usePortfolioData }  from '@/hooks/usePortfolioData'
+import { useWatchlistData }  from '@/hooks/useWatchlistData'
 import dynamic from 'next/dynamic'
 
 const TickerModal = dynamic(() => import('@/components/shared/TickerModal'), { ssr: false })
@@ -162,6 +164,13 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
   const supabase = createClient()
   const [bellOpen, setBellOpen] = useState(false)
   const bellRef = useRef<HTMLDivElement>(null)
+
+  // ── Global data hydration — always active regardless of active tab ────────────
+  // Loads positions + watchlist from Supabase on mount and keeps prices fresh
+  // (Stooq live prices every 60s). Must live here, not in individual tab views,
+  // so KPIs on Dashboard Home always reflect current data.
+  usePortfolioData()
+  useWatchlistData()
 
   const unreadCount = alerts.filter((a) => !a.readAt).length
 
